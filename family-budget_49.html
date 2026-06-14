@@ -1,0 +1,3284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paisa — Family Budget Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE7;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #1A1814;
+    --text2: #6B6760;
+    --text3: #A09D98;
+    --income: #1D6B4A;
+    --income-bg: #E5F4EE;
+    --expense: #B03A2E;
+    --expense-bg: #FDECEA;
+    --accent: #C8A96E;
+    --accent-light: #F5EDD8;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --sidebar-bg: #1A1814;
+    --sidebar-text: #fff;
+  }
+  body.dark {
+    --bg: #111110;
+    --surface: #1C1B19;
+    --surface2: #242320;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #F0EDE7;
+    --text2: #A09D98;
+    --text3: #6B6760;
+    --income-bg: #0d2e1e;
+    --expense-bg: #2e0f0b;
+    --accent-light: #2a2318;
+    --sidebar-bg: #0D0C0B;
+    --sidebar-text: #F0EDE7;
+  }
+
+  /* ── PRO LIGHT: muted sage-green, easy on the eyes ── */
+  body.pro {
+    --bg: #EDF0EC;
+    --surface: #F7F8F6;
+    --surface2: #E4E8E2;
+    --border: rgba(74,103,65,0.10);
+    --border2: rgba(74,103,65,0.18);
+    --text: #1E2A1A;
+    --text2: #4A6741;
+    --text3: #8AA384;
+    --income: #2D6A4F;
+    --income-bg: #D8EDDF;
+    --expense: #8B3A2A;
+    --expense-bg: #F5E0DA;
+    --accent: #4A7C59;
+    --accent-light: #D8EDDF;
+    --sidebar-bg: #1E2A1A;
+    --sidebar-text: #D8E8D4;
+  }
+  /* ── PRO DARK: deep slate-green, warm and restful ── */
+  body.pro.dark {
+    --bg: #141A12;
+    --surface: #1C2419;
+    --surface2: #232D1F;
+    --border: rgba(100,140,88,0.10);
+    --border2: rgba(100,140,88,0.18);
+    --text: #D4E4CF;
+    --text2: #8AAD82;
+    --text3: #4A6741;
+    --income: #74C69D;
+    --income-bg: #0A2318;
+    --expense: #E07060;
+    --expense-bg: #280E0A;
+    --accent: #74C69D;
+    --accent-light: #0d2e1e;
+    --sidebar-bg: #0D1109;
+    --sidebar-text: #D4E4CF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: none; -ms-overflow-style: none; }
+  *::-webkit-scrollbar { display: none; }
+  body { transition: background 0.3s, color 0.3s; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* LAYOUT */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 260px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.28s cubic-bezier(.4,0,.2,1), background 0.3s; overflow: hidden; }
+  .sidebar.collapsed { width: 0; }
+  .sidebar-inner { width: 260px; display: flex; flex-direction: column; height: 100%; overflow-y: auto; overflow-x: hidden; }
+  .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .mobile-nav-bar { display: none; } /* hidden on desktop, shown in @media */
+  .sidebar-overlay { display: none; }
+  .sidebar-toggle { position: absolute; top: 20px; left: 14px; z-index: 20; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text2); font-size: 15px; transition: all 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .sidebar-toggle:hover { background: var(--surface2); color: var(--text); }
+
+  /* SIDEBAR */
+  .sidebar-header { padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .logo { font-family: 'Instrument Serif', serif; font-size: 26px; letter-spacing: -0.5px; color: var(--accent); }
+  .logo span { color: rgba(255,255,255,0.5); font-size: 12px; font-style: italic; display: block; font-family: 'DM Sans', sans-serif; margin-top: 2px; }
+  .profile-section { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .profile-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.35); margin-bottom: 10px; padding-left: 8px; }
+  .profile-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: var(--radius-sm); border: none; background: transparent; color: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; transition: background 0.15s; text-align: left; }
+  .profile-btn:hover { background: rgba(255,255,255,0.07); }
+  .profile-btn.active { background: rgba(200,169,110,0.2); }
+  .profile-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .profile-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+  .profile-btn.active .profile-avatar { box-shadow: 0 0 0 2px var(--accent); }
+  .add-profile-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px dashed rgba(255,255,255,0.18); background: transparent; color: rgba(255,255,255,0.4); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; margin-top: 8px; transition: all 0.15s; }
+  .add-profile-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .profile-row { position: relative; display: flex; align-items: center; }
+  .profile-row .profile-btn { flex: 1; }
+  .profile-del-btn { opacity: 0; background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.3); font-size: 14px; padding: 5px 6px; border-radius: 5px; transition: all 0.15s; flex-shrink: 0; }
+  .profile-row:hover .profile-del-btn { opacity: 1; }
+  .profile-del-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+  .profile-del-btn.danger:hover { background: rgba(176,58,46,0.3); color: #f09595; }
+  .confirm-modal { background: var(--surface); border-radius: 18px; padding: 28px 30px; width: 380px; max-width: 94vw; transform: translateY(12px); transition: transform 0.2s; }
+  .modal-overlay.open .confirm-modal { transform: translateY(0); }
+  .confirm-icon { width: 48px; height: 48px; border-radius: 50%; background: var(--expense-bg); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 16px; }
+  .confirm-title { font-family: 'Instrument Serif', serif; font-size: 20px; margin-bottom: 8px; }
+  .confirm-body { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 22px; }
+  .btn-danger { background: var(--expense); color: #fff; }
+  .btn-danger:hover { background: #8e2e23; }
+  .bulk-del-btn { font-size: 13px; padding: 6px 12px; color: var(--expense); border-color: rgba(176,58,46,0.25); }
+  .bulk-del-btn:hover { background: var(--expense-bg); }
+  .nav-section { padding: 16px 16px 8px; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 10px; border-radius: var(--radius-sm); border: none; background: transparent; color: rgba(255,255,255,0.55); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; transition: all 0.15s; text-align: left; }
+  .nav-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .nav-btn.active { background: rgba(255,255,255,0.1); color: #fff; }
+  .nav-btn i { font-size: 17px; }
+  .sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+  .bank-badge { background: rgba(200,169,110,0.15); border: 1px solid rgba(200,169,110,0.3); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: rgba(255,255,255,0.6); }
+  .bank-badge strong { color: var(--accent); display: block; font-size: 11px; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; }
+  .theme-switcher { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 8px; }
+  .theme-chip { padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: rgba(255,255,255,0.45); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 11px; transition: all 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .theme-chip:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.8); }
+  .theme-chip.active { background: rgba(200,169,110,0.2); border-color: var(--accent); color: var(--accent); }
+
+  /* SYNC STATUS */
+  .sync-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 6px 10px; border-radius: var(--radius-sm); margin-bottom: 8px; }
+  .sync-badge.synced { background: rgba(29,107,74,0.15); color: #6fcfa0; }
+  .sync-badge.syncing { background: rgba(200,169,110,0.15); color: var(--accent); }
+  .sync-badge.error { background: rgba(176,58,46,0.15); color: #f09595; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .sync-badge.synced .sync-dot { background: #6fcfa0; }
+  .sync-badge.syncing .sync-dot { background: var(--accent); animation: pulse 1s infinite; }
+  .sync-badge.error .sync-dot { background: #f09595; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* TOPBAR */
+  .topbar { padding: 24px 32px 0 62px; display: flex; align-items: center; justify-content: space-between; }
+  .page-title { font-family: 'Instrument Serif', serif; font-size: 30px; color: var(--text); }
+  .page-title span { color: var(--text3); font-size: 16px; font-family: 'DM Sans', sans-serif; display: block; margin-top: 2px; }
+  .topbar-actions { display: flex; gap: 10px; }
+  .btn { padding: 9px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #2a1f0a; }
+  .btn-primary:hover { background: #b8975a; }
+  .btn-ghost { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
+  .btn-ghost:hover { background: var(--border2); }
+
+  /* STATS */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px 32px 0; }
+  .stat-card { background: var(--surface); border-radius: var(--radius); padding: 20px 22px; border: 1px solid var(--border); }
+  .stat-card.income-card { background: var(--income); color: #fff; }
+  .stat-card.expense-card { background: var(--expense); color: #fff; }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.6; margin-bottom: 10px; }
+  .stat-value { font-family: 'Instrument Serif', serif; font-size: 34px; line-height: 1; }
+  .stat-value.positive { color: var(--income); }
+  .stat-value.negative { color: var(--expense); }
+  .income-card .stat-value, .expense-card .stat-value { color: #fff; }
+  .stat-sub { font-size: 12px; opacity: 0.55; margin-top: 8px; }
+
+  /* CONTENT */
+  .content { padding: 24px 32px 32px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+  .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+  .card-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-weight: 600; font-size: 15px; }
+  .card-body { padding: 0; }
+
+  /* TRANSACTIONS */
+  .tx-item { display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  .tx-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .tx-amount-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-item:hover { background: var(--surface2); }
+  .tx-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .tx-icon.income { background: var(--income-bg); color: var(--income); }
+  .tx-icon.expense { background: var(--expense-bg); color: var(--expense); }
+  .tx-info { flex: 1; }
+  .tx-name { font-size: 14px; font-weight: 500; }
+  .tx-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .tx-amount { font-size: 15px; font-weight: 600; }
+  .tx-amount.income { color: var(--income); }
+  .tx-amount.expense { color: var(--expense); }
+  .tx-delete { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 15px; padding: 4px; border-radius: 4px; transition: all 0.15s; }
+  .tx-delete:hover { background: var(--expense-bg); color: var(--expense); }
+
+  /* CHART */
+  .chart-wrap { padding: 20px 22px; }
+
+  /* CATEGORY PILLS */
+  .category-list { padding: 16px 22px; display: flex; flex-direction: column; gap: 10px; }
+  .cat-row { display: flex; align-items: center; gap: 10px; }
+  .cat-label { font-size: 13px; color: var(--text2); width: 110px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .cat-bar { height: 100%; border-radius: 99px; background: var(--accent); }
+  .cat-amount { font-size: 12px; font-weight: 600; color: var(--text2); width: 72px; text-align: right; }
+  .cat-budget-line { margin-top: 7px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--text3); }
+  .cat-budget-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid var(--border2); border-radius: 999px; color: var(--text2); background: var(--surface2); }
+  .cat-budget-progress { margin-top: 8px; height: 6px; max-width: 360px; border-radius: 999px; overflow: hidden; background: var(--surface2); }
+  .cat-budget-progress span { display: block; height: 100%; border-radius: inherit; background: var(--income); }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--surface); border-radius: 18px; padding: 28px 30px; width: 440px; max-width: 94vw; transform: translateY(12px); transition: transform 0.2s; border: 1px solid var(--border); }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-family: 'Instrument Serif', serif; font-size: 22px; margin-bottom: 22px; }
+  .form-row { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; display: block; }
+  .form-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--surface2); color: var(--text); outline: none; transition: border-color 0.15s; }
+  .form-input:focus { border-color: var(--accent); }
+  .type-toggle { display: flex; gap: 8px; }
+  .type-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: transparent; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.15s; color: var(--text2); }
+  .type-btn.income.active { background: var(--income-bg); border-color: var(--income); color: var(--income); }
+  .type-btn.expense.active { background: var(--expense-bg); border-color: var(--expense); color: var(--expense); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+  .modal-actions .btn { flex: 1; padding: 12px; }
+
+  /* PROFILE MODAL */
+  .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+  .color-opt { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .color-opt.selected { border-color: var(--text); transform: scale(1.15); }
+
+  /* EMPTY STATE */
+  .empty { padding: 40px 22px; text-align: center; color: var(--text3); }
+  .empty i { font-size: 32px; margin-bottom: 10px; opacity: 0.4; display: block; }
+  .empty p { font-size: 14px; }
+
+  /* FILTER BAR */
+  .filter-bar { display: flex; gap: 8px; padding: 14px 22px; border-bottom: 1px solid var(--border); }
+  .filter-chip { padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border2); background: transparent; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; color: var(--text2); transition: all 0.15s; }
+  .filter-chip.active { background: var(--accent); color: #2a1f0a; border-color: var(--accent); }
+
+  /* NET BALANCE CARD */
+  .net-card { background: linear-gradient(135deg, #1A1814 0%, #2d2a25 100%); color: #fff; }
+  .net-card .stat-label { color: rgba(255,255,255,0.5); }
+
+  /* MONTH NAV */
+  .month-nav { display: flex; align-items: center; gap: 12px; }
+  .month-nav button { background: none; border: 1px solid var(--border2); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 14px; }
+  .month-nav button:hover { background: var(--surface2); }
+  .month-nav span { font-size: 14px; font-weight: 500; min-width: 110px; text-align: center; }
+
+  /* AUDIT TRAIL */
+  .tx-item-wrap { border-bottom: 1px solid var(--border); }
+  .tx-item-wrap:last-child { border-bottom: none; }
+  .tx-item-wrap .tx-item { border-bottom: none; }
+  .audit-trail { background: var(--surface2); border-top: 1px solid var(--border); padding: 10px 14px 10px 58px; display: none; }
+  .audit-trail.open { display: block; }
+  .audit-entry { font-size: 11px; color: var(--text3); padding: 3px 0; display: flex; align-items: baseline; gap: 6px; }
+  .audit-entry::before { content: '•'; color: var(--accent); }
+  .audit-badge { font-size: 10px; background: var(--accent-light); color: var(--accent); padding: 1px 6px; border-radius: 99px; font-weight: 600; }
+  .tx-actions { opacity: 0; transition: opacity 0.15s; }
+  .tx-item:hover .tx-actions, .tx-item-wrap:hover .tx-actions { opacity: 1; }
+  .tx-edit-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px; border-radius: 4px; transition: all 0.15s; }
+  .tx-edit-btn:hover { background: var(--accent-light); color: var(--accent); }
+  .tx-expand-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 13px; padding: 4px; border-radius: 4px; transition: all 0.15s; }
+  .tx-expand-btn:hover { color: var(--accent); }
+  /* PAYMENT METHOD BADGE */
+  .pay-badge { font-size: 10px; padding: 1px 6px; border-radius: 99px; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); white-space: nowrap; }
+  /* PAYMENT METHODS in profile */
+  .pay-method-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .pay-method-row:last-child { border-bottom: none; }
+  .pay-method-icon { width: 34px; height: 34px; border-radius: 8px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .pay-method-info { flex: 1; min-width: 0; }
+  .pay-method-name { font-size: 13px; font-weight: 500; }
+  .pay-method-sub { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pay-method-default { font-size: 10px; background: var(--income-bg); color: var(--income); padding: 2px 7px; border-radius: 99px; font-weight: 600; flex-shrink: 0; }
+  /* CARRY FORWARD MODAL */
+  .cf-option { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); cursor: pointer; margin-bottom: 8px; transition: all 0.15s; }
+  .cf-option:hover { border-color: var(--accent); background: var(--accent-light); }
+  .cf-option.selected { border-color: var(--accent); background: var(--accent-light); }
+  .cf-option-icon { font-size: 22px; }
+  .cf-option-info { flex: 1; }
+  .cf-option-title { font-size: 14px; font-weight: 600; }
+  .cf-option-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  /* TRANSFER */
+  .type-btn.transfer { }
+  .type-btn.transfer.active { background: #1a3a6e20; border-color: #3b7dd8; color: #3b7dd8; }
+  .tx-icon.transfer { background: #e8f0fb; color: #3b7dd8; }
+  body.dark .tx-icon.transfer { background: #1a2d50; color: #7ab3f0; }
+  .transfer-badge { font-size:10px; padding:2px 7px; border-radius:99px; background:#e8f0fb; color:#3b7dd8; font-weight:600; border:1px solid #3b7dd820; }
+  body.dark .transfer-badge { background:#1a2d50; color:#7ab3f0; }
+  :root { --transfer-bg: rgba(59,125,216,0.04); }
+  body.dark { --transfer-bg: rgba(122,179,240,0.06); }
+  .transfer-fields { display:none; }
+  .transfer-fields.visible { display:block; }
+  .transfer-link-line { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:12px; color:var(--text3); }
+  .transfer-link-line::before, .transfer-link-line::after { content:''; flex:1; height:1px; background:var(--border); }
+  /* LOADING */
+  .loading-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px; transition: opacity 0.4s; }
+  .loading-logo { font-family: 'Instrument Serif', serif; font-size: 40px; color: var(--accent); }
+  .loading-spinner { width: 28px; height: 28px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .loading-text { font-size: 13px; color: var(--text3); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* FILTER PANEL */
+  .filter-panel { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--surface2); }
+  .filter-panel-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .tx-search { flex: 1; min-width: 160px; padding: 7px 12px; border: 1px solid var(--border2); border-radius: 99px; font-family: 'DM Sans',sans-serif; font-size: 13px; background: var(--surface); color: var(--text); outline: none; }
+  .tx-search:focus { border-color: var(--accent); }
+  .tx-search::placeholder { color: var(--text3); }
+  .sort-select { padding: 6px 10px; border: 1px solid var(--border2); border-radius: 99px; font-family: 'DM Sans',sans-serif; font-size: 12px; background: var(--surface); color: var(--text2); cursor: pointer; outline: none; }
+  .sort-select:focus { border-color: var(--accent); }
+  .cat-filter-select { padding: 6px 10px; border: 1px solid var(--border2); border-radius: 99px; font-family: 'DM Sans',sans-serif; font-size: 12px; background: var(--surface); color: var(--text2); cursor: pointer; outline: none; max-width: 140px; }
+  .group-toggle { padding: 5px 10px; border-radius: 99px; border: 1px solid var(--border2); background: transparent; font-family: 'DM Sans',sans-serif; font-size: 12px; cursor: pointer; color: var(--text2); transition: all 0.15s; }
+  .group-toggle.active { background: var(--accent); color: #2a1f0a; border-color: var(--accent); }
+  /* DAY GROUP HEADERS */
+  .day-group-header { padding: 8px 22px 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .day-group-total { font-size: 11px; font-weight: 500; }
+  .day-group-total.pos { color: var(--income); }
+  .day-group-total.neg { color: var(--expense); }
+  /* MOBILE FILTER PANEL */
+  @media (max-width: 768px) {
+    .filter-panel { padding: 10px 12px; gap: 6px; }
+    .tx-search { min-width: 100%; }
+    .topbar-actions { gap: 6px; }
+    .topbar-actions .btn { padding: 7px 10px; font-size: 13px; }
+    .month-nav span { min-width: 70px; font-size: 12px; }
+    .profile-page-wrap { padding: 14px 16px 32px; }
+    .profile-hero-card { flex-direction: column; gap: 16px; padding: 18px; }
+    .profile-details-grid { grid-template-columns: 1fr 1fr; }
+    .profile-stat-row { grid-template-columns: 1fr 1fr; }
+    /* fix bleeding — constrain width */
+    .main-wrapper { width: 100%; max-width: 100vw; overflow-x: hidden; }
+    .main { width: 100%; max-width: 100vw; overflow-x: hidden; }
+    #mainContent { width: 100%; max-width: 100vw; overflow-x: hidden; }
+    .stats-grid { padding: 14px 12px 0; }
+    .content { padding: 12px 12px 24px; }
+    .topbar { padding: 14px 12px 0 12px; }
+    .family-hero { margin: 0 12px; }
+    .profile-stat-row { grid-template-columns: 1fr; }
+    .gmail-connect-card { margin: 0; }
+    /* prevent long words breaking layout */
+    .tx-name, .tx-meta, .profile-detail-value { word-break: break-word; overflow-wrap: break-word; }
+    /* audit trail indent fix */
+    .audit-trail { padding-left: 16px; }
+  }
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .app { flex-direction: column; height: 100dvh; }
+
+    /* Sidebar becomes a bottom sheet / drawer */
+    .sidebar { position: fixed; bottom: 0; left: 0; right: 0; width: 100% !important; height: auto; max-height: 80dvh; z-index: 100; flex-direction: column; border-radius: 20px 20px 0 0; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1); }
+    .sidebar.mobile-open { transform: translateY(0); }
+    .sidebar.collapsed { width: 100% !important; transform: translateY(100%); }
+    .sidebar-inner { width: 100%; }
+    .sidebar-header { padding: 16px 20px 14px; display: flex; align-items: center; justify-content: space-between; }
+    .sidebar-footer { padding: 12px 16px 24px; }
+    .profile-section { padding: 12px 16px; }
+    .nav-section { padding: 8px 16px; display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .nav-btn { width: auto; flex: 1; min-width: 100px; padding: 8px 10px; font-size: 13px; justify-content: center; }
+    .theme-switcher { grid-template-columns: repeat(4,1fr); }
+
+    /* Main takes full screen */
+    .main-wrapper { flex: 1; width: 100%; overflow: hidden; padding-bottom: 64px; }
+    .main { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Bottom nav bar replaces sidebar toggle */
+    .sidebar-toggle { display: none; }
+    .mobile-nav-bar { display: flex !important; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--sidebar-bg); z-index: 99; border-top: 1px solid rgba(255,255,255,0.08); padding: 0 8px; align-items: center; justify-content: space-around; }
+    .mob-nav-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: rgba(255,255,255,0.45); cursor: pointer; font-family: 'DM Sans',sans-serif; font-size: 10px; padding: 6px 12px; border-radius: 10px; transition: all 0.15s; min-width: 56px; }
+    .mob-nav-btn i { font-size: 20px; }
+    .mob-nav-btn.active { color: var(--accent); }
+    .mob-nav-btn.mob-menu-btn { color: rgba(255,255,255,0.45); }
+    .mob-nav-btn.mob-menu-btn.active { color: var(--accent); }
+
+    /* Overlay behind sidebar drawer */
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 99; }
+    .sidebar-overlay.visible { display: block; }
+
+    /* Topbar */
+    .topbar { padding: 18px 16px 0 16px; flex-wrap: wrap; gap: 10px; }
+    .topbar-actions { flex-wrap: wrap; gap: 8px; }
+    .page-title { font-size: 22px; }
+    .month-nav span { min-width: 80px; font-size: 13px; }
+
+    /* Stats grid: 1 col on small screens */
+    .stats-grid { grid-template-columns: 1fr; gap: 10px; padding: 14px 16px 0; }
+    .stat-card { padding: 14px 16px; }
+    .stat-value { font-size: 26px; }
+
+    /* Content: single column */
+    .content { grid-template-columns: 1fr; padding: 14px 16px 24px; gap: 14px; }
+
+    /* Transactions */
+    .tx-item { padding: 12px 14px; gap: 10px; }
+    .tx-delete { opacity: 1; }
+
+    /* Family hero */
+    .family-hero { margin: 0 16px; padding: 20px 20px 18px; }
+    .family-hero-amount { font-size: 36px; }
+    .family-stats { grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+
+    /* Cards, filter bar */
+    .filter-bar { padding: 10px 14px; gap: 6px; }
+    .card-header { padding: 14px 16px; }
+    .category-list { padding: 12px 14px; }
+
+    /* Modal full-screen on mobile */
+    .modal-overlay { align-items: flex-end; }
+    .modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; padding: 24px 20px 32px; }
+    .confirm-modal { width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; }
+
+    /* Content padding inside main on mobile */
+    #mainContent > div[style*="padding:24px 32px"], #mainContent > div[style*="padding:16px 32px"], #mainContent > div[style*="padding:0 32px"] { padding: 12px 16px 24px !important; }
+  }
+
+  /* PROFILE PAGE */
+  .profile-page-wrap { padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 20px; }
+  .profile-hero-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; display: flex; gap: 24px; align-items: flex-start; }
+  .profile-photo-wrap { position: relative; flex-shrink: 0; }
+  .profile-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; }
+  .profile-photo-edit { position: absolute; bottom: 0; right: 0; width: 26px; height: 26px; background: var(--accent); border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
+  .profile-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .profile-detail-item { display: flex; flex-direction: column; gap: 4px; }
+  .profile-detail-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); font-weight: 600; }
+  .profile-detail-value { font-size: 14px; font-weight: 500; color: var(--text); }
+  .profile-detail-value.muted { color: var(--text3); font-weight: 400; }
+  .profile-section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .profile-section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .profile-section-body { padding: 16px 20px; }
+  .profile-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .profile-stat-box { background: var(--surface2); border-radius: 10px; padding: 14px 16px; }
+  .profile-stat-box-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .profile-stat-box-value { font-family: 'Instrument Serif', serif; font-size: 22px; }
+  .gmail-connect-card { background: linear-gradient(135deg, #EA4335 0%, #c0392b 100%); border-radius: var(--radius); padding: 20px 22px; color: #fff; }
+  .gmail-connect-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .gmail-connect-sub { font-size: 13px; opacity: 0.8; line-height: 1.5; margin-bottom: 16px; }
+  .gmail-connect-btn { background: #fff; color: #EA4335; border: none; border-radius: var(--radius-sm); padding: 9px 18px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.15s; }
+  .gmail-connect-btn:hover { opacity: 0.9; }
+  .gmail-step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .gmail-step:last-child { border-bottom: none; }
+  .gmail-step-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .gmail-step-text { font-size: 13px; opacity: 0.9; line-height: 1.5; }
+  .gmail-step-text strong { opacity: 1; }
+  @media (max-width: 768px) {
+    .profile-page-wrap { padding: 14px 16px 32px; }
+    .profile-hero-card { flex-direction: column; gap: 16px; padding: 20px; }
+    .profile-details-grid { grid-template-columns: 1fr 1fr; }
+    .profile-stat-row { grid-template-columns: 1fr 1fr; }
+  }
+  /* FAMILY VIEW */
+  .family-hero { background: linear-gradient(135deg, var(--sidebar-bg) 0%, #2d2a25 100%); color: #fff; border-radius: var(--radius); padding: 28px 28px 22px; margin: 0 32px; position: relative; overflow: hidden; }
+  .family-hero::after { content:''; position:absolute; top:-40px; right:-40px; width:180px; height:180px; border-radius:50%; background:rgba(200,169,110,0.07); }
+  .family-hero-label { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:rgba(255,255,255,0.4); margin-bottom:6px; }
+  .family-hero-amount { font-family:'Instrument Serif',serif; font-size:48px; line-height:1; color:#fff; }
+  .family-hero-sub { font-size:13px; color:rgba(255,255,255,0.45); margin-top:8px; }
+  .family-stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+  .family-stat { background:rgba(255,255,255,0.07); border-radius:10px; padding:14px 16px; }
+  .family-stat-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.4); margin-bottom:5px; }
+  .family-stat-value { font-family:'Instrument Serif',serif; font-size:22px; }
+  .family-stat-value.pos { color:#6fcfa0; }
+  .family-stat-value.neg { color:#f09595; }
+  .family-transfer-stat { grid-column:1/-1; padding:14px 16px 12px; }
+  .family-transfer-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .family-transfer-total { font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; color:rgba(255,255,255,0.78); white-space:nowrap; }
+  .family-transfer-list { display:flex; flex-wrap:wrap; gap:8px; }
+  .family-transfer-pill { display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:5px 9px; border-radius:999px; background:rgba(122,179,240,0.12); border:1px solid rgba(122,179,240,0.2); color:rgba(255,255,255,0.72); font-size:12px; line-height:1.2; }
+  .family-transfer-pill strong { color:#7ab3f0; font-weight:600; }
+  .member-cards { display:flex; flex-direction:column; gap:10px; }
+  .member-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:background 0.15s; }
+  .member-card:hover { background:var(--surface2); }
+  .member-card-avatar { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex-shrink:0; }
+  .member-card-info { flex:1; }
+  .member-card-name { font-size:15px; font-weight:600; }
+  .member-card-sub { font-size:12px; color:var(--text3); margin-top:2px; }
+  .member-card-stats { text-align:right; }
+  .member-card-net { font-family:'Instrument Serif',serif; font-size:20px; }
+  .member-card-net.pos { color:var(--income); }
+  .member-card-net.neg { color:var(--expense); }
+  .member-card-meta { font-size:11px; color:var(--text3); margin-top:2px; }
+  .member-tag-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .member-tag { padding:7px 12px; border-radius:99px; border:1px solid var(--border2); background:transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--text2); transition:all 0.15s; display:flex; align-items:center; gap:6px; }
+  .member-tag.selected { border-width:2px; font-weight:600; }
+  .tx-member-badge { font-size:11px; padding:2px 7px; border-radius:99px; font-weight:500; }
+  .emoji-picker-wrap { display:flex; flex-direction:column; gap:8px; }
+  .emoji-search { width:100%; padding:8px 12px; border:1px solid var(--border2); border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif; font-size:13px; background:var(--surface2); color:var(--text); outline:none; }
+  .emoji-search:focus { border-color:var(--accent); }
+  .emoji-search::placeholder { color:var(--text3); }
+  .emoji-grid { display:flex; flex-wrap:wrap; gap:5px; max-height:160px; overflow-y:auto; padding:2px; }
+  .emoji-opt { width:34px; height:34px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.12s; flex-shrink:0; }
+  .emoji-opt:hover { transform:scale(1.15); border-color:var(--accent); }
+  .emoji-opt.selected { border-color:var(--accent); background:var(--accent-light); transform:scale(1.1); }
+  .emoji-no-results { font-size:13px; color:var(--text3); padding:12px 0; }
+  .family-section-header { font-size:12px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); font-weight:600; padding: 0 0 10px; }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">Paisa</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Connecting to Firestore…</div>
+</div>
+
+<div class="app" id="appShell" style="display:none">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+    <div class="sidebar-header">
+      <div class="logo">Paisa <span>family budget tracker</span></div>
+    </div>
+    <div class="profile-section">
+      <div class="profile-label">Profiles</div>
+      <div id="profileList"></div>
+      <button class="profile-btn" id="familyProfileBtn" onclick="switchToFamily()">
+        <div class="profile-avatar" style="background:rgba(200,169,110,0.2);color:var(--accent)"><i class="ti ti-users" style="font-size:13px"></i></div>
+        <span>Family</span>
+      </button>
+      <button class="add-profile-btn" onclick="openProfileModal()">
+        <i class="ti ti-plus"></i> Add profile
+      </button>
+    </div>
+    <div class="nav-section">
+      <button class="nav-btn active" onclick="switchNav('dashboard', this)">
+        <i class="ti ti-layout-dashboard"></i> Dashboard
+      </button>
+      <button class="nav-btn" onclick="switchNav('transactions', this)">
+        <i class="ti ti-list"></i> All Transactions
+      </button>
+      <button class="nav-btn" onclick="switchNav('categories', this)">
+        <i class="ti ti-tag"></i> Categories
+      </button>
+      <button class="nav-btn" onclick="switchNav('profile', this)" id="navProfileBtn">
+        <i class="ti ti-user-circle"></i> My Profile
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sync-badge synced" id="syncBadge">
+        <div class="sync-dot"></div>
+        <span id="syncText">Live sync on</span>
+      </div>
+      <div class="theme-switcher" id="themeSwitcher">
+        <button class="theme-chip active" id="tc-default" onclick="setTheme('default')" title="Warm (default)">☀ Warm</button>
+        <button class="theme-chip" id="tc-dark" onclick="setTheme('dark')" title="Dark">🌙 Dark</button>
+        <button class="theme-chip" id="tc-pro" onclick="setTheme('pro')" title="Professional light">💼 Pro</button>
+        <button class="theme-chip" id="tc-prodark" onclick="setTheme('prodark')" title="Professional dark">🔷 Pro Dark</button>
+      </div>
+      <div class="bank-badge" style="cursor:pointer" onclick="switchNav('profile', document.getElementById('navProfileBtn'))">
+        <strong>📧 Gmail Auto-import</strong>
+        Tap to set up bank SMS/email sync
+      </div>
+    </div>
+    </div><!-- /.sidebar-inner -->
+  </aside>
+
+  <!-- MOBILE SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle" title="Toggle sidebar"><i class="ti ti-layout-sidebar-left-collapse" id="sidebarToggleIcon"></i></button>
+    <main class="main" id="mainContent"></main>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav-bar" id="mobileNavBar">
+    <button class="mob-nav-btn active" id="mob-dashboard" onclick="mobNav('dashboard',this)">
+      <i class="ti ti-layout-dashboard"></i>Home
+    </button>
+    <button class="mob-nav-btn" id="mob-transactions" onclick="mobNav('transactions',this)">
+      <i class="ti ti-list"></i>Txns
+    </button>
+    <button class="mob-nav-btn" id="mob-add" onclick="openTxModal()">
+      <i class="ti ti-plus" style="background:var(--accent);color:#1a1a1a;border-radius:50%;padding:4px;font-size:18px"></i>Add
+    </button>
+    <button class="mob-nav-btn" id="mob-categories" onclick="mobNav('categories',this)">
+      <i class="ti ti-tag"></i>Cats
+    </button>
+    <button class="mob-nav-btn" id="mob-profile" onclick="mobNav('profile',this)">
+      <i class="ti ti-user-circle"></i>Profile
+    </button>
+    <button class="mob-nav-btn mob-menu-btn" id="mob-menu" onclick="toggleMobileSidebar()">
+      <i class="ti ti-menu-2"></i>Menu
+    </button>
+  </nav>
+</div>
+
+<!-- ADD TRANSACTION MODAL -->
+<div class="modal-overlay" id="txModal">
+  <div class="modal">
+    <div class="modal-title" id="txModalTitle">Add Transaction</div>
+    <div class="form-row">
+      <label class="form-label">Type</label>
+      <div class="type-toggle">
+        <button class="type-btn income active" id="typeIncome" onclick="selectType('income')">↑ Income</button>
+        <button class="type-btn expense" id="typeExpense" onclick="selectType('expense')">↓ Expense</button>
+        <button class="type-btn transfer" id="typeTransfer" onclick="selectType('transfer')">↔ Transfer</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Amount (₹)</label>
+      <input class="form-input" type="number" id="txAmount" placeholder="0" min="0" step="0.01">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Description</label>
+      <input class="form-input" type="text" id="txDesc" placeholder="e.g. Dinner, fuel, medicine">
+    </div>
+    <div class="form-row">
+      <label class="form-label" id="txPayeeLabel">Paid to</label>
+      <input class="form-input" type="text" id="txPayee" placeholder="e.g. Swiggy, Rahul, HDFC Bank" list="payeeSuggestions" autocomplete="off">
+      <datalist id="payeeSuggestions"></datalist>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Category <button type="button" onclick="closeModal('txModal');openCatModal()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--accent);font-family:'DM Sans',sans-serif;padding:0 0 0 8px">+ Add new</button></label>
+      <select class="form-input" id="txCategory"></select>
+    </div>
+    <div class="form-row" id="txMemberRow" style="display:none">
+      <label class="form-label">Tag to member</label>
+      <div class="member-tag-row" id="txMemberTags"></div>
+    </div>
+    <!-- Transfer-specific fields (shown only when type=transfer) -->
+    <div class="transfer-fields" id="transferFields">
+      <div class="transfer-link-line">Transfer details</div>
+      <div class="form-row">
+        <label class="form-label">From (who is sending)</label>
+        <select class="form-input" id="txTransferFrom"></select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">To (who is receiving)</label>
+        <select class="form-input" id="txTransferTo"></select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Transfer type</label>
+        <div class="type-toggle">
+          <button class="type-btn income active" id="txTransferTypeFamily" onclick="selectTransferType('family')">👨‍👩‍👧 Family</button>
+          <button class="type-btn expense" id="txTransferTypeSelf" onclick="selectTransferType('self')">🔄 Self</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label" id="txPayMethodLabel">Paid via</label>
+      <select class="form-input" id="txPayMethod"><option value="">— Cash / Not specified —</option></select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Date</label>
+      <input class="form-input" type="date" id="txDate">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('txModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTransaction()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PROFILE MODAL -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <div class="modal-title">Add Profile</div>
+    <div class="form-row">
+      <label class="form-label">Name</label>
+      <input class="form-input" type="text" id="profileName" placeholder="e.g. Mum, Dad, Rohan...">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Colour</label>
+      <div class="color-picker" id="colorPicker"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('profileModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="confirm-modal">
+    <div class="confirm-icon"><i class="ti ti-trash" style="color:var(--expense)"></i></div>
+    <div class="confirm-title" id="confirmTitle">Delete?</div>
+    <div class="confirm-body" id="confirmBody">This cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn btn-danger" id="confirmActionBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- RENAME PROFILE MODAL -->
+<div class="modal-overlay" id="renameModal">
+  <div class="modal">
+    <div class="modal-title">Rename Profile</div>
+    <div class="form-row">
+      <label class="form-label">New name</label>
+      <input class="form-input" type="text" id="renameProfileInput" placeholder="e.g. Mum, Dad, Rohan...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('renameModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="renameProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT CATEGORY MODAL -->
+<div class="modal-overlay" id="catModal">
+  <div class="modal">
+    <div class="modal-title" id="catModalTitle">Add Category</div>
+    <input type="hidden" id="catEditId">
+    <div class="form-row">
+      <label class="form-label">Name</label>
+      <input class="form-input" type="text" id="catName" placeholder="e.g. Transport, Health...">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Icon</label>
+      <div class="emoji-picker-wrap">
+        <input class="emoji-search" id="emojiSearch" placeholder="Search emoji… e.g. card, food, home" oninput="filterEmojis()">
+        <div class="emoji-grid" id="emojiGrid"></div>
+        <input class="form-input" type="text" id="catIcon" placeholder="or paste any emoji here…" oninput="syncEmojiSelection()">
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Monthly budget (optional)</label>
+      <input class="form-input" type="number" id="catBudget" placeholder="0" min="0" step="0.01">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('catModal')">Cancel</button>
+      <button class="btn btn-primary" id="catSaveBtn" onclick="saveCategory()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT TRANSACTION MODAL -->
+<div class="modal-overlay" id="editTxModal">
+  <div class="modal">
+    <div class="modal-title">Edit Transaction</div>
+    <input type="hidden" id="editTxId">
+    <div class="form-row">
+      <label class="form-label">Type</label>
+      <div class="type-toggle">
+        <button class="type-btn income" id="editTypeIncome" onclick="selectEditType('income')">↑ Income</button>
+        <button class="type-btn expense active" id="editTypeExpense" onclick="selectEditType('expense')">↓ Expense</button>
+        <button class="type-btn transfer" id="editTypeTransfer" onclick="selectEditType('transfer')">↔ Transfer</button>
+      </div>
+    </div>
+    <!-- Transfer fields for edit modal -->
+    <div class="transfer-fields" id="editTransferFields">
+      <div class="transfer-link-line">Transfer details</div>
+      <div class="form-row">
+        <label class="form-label">From</label>
+        <select class="form-input" id="editTransferFrom"></select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">To</label>
+        <select class="form-input" id="editTransferTo"></select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Transfer type</label>
+        <div class="type-toggle">
+          <button class="type-btn income active" id="editTransferTypeFamily" onclick="selectEditTransferType('family')">👨‍👩‍👧 Family</button>
+          <button class="type-btn expense" id="editTransferTypeSelf" onclick="selectEditTransferType('self')">🔄 Self</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Amount (₹)</label>
+      <input class="form-input" type="number" id="editTxAmount" placeholder="0" min="0" step="0.01">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Description</label>
+      <input class="form-input" type="text" id="editTxDesc">
+    </div>
+    <div class="form-row">
+      <label class="form-label" id="editTxPayeeLabel">Paid to</label>
+      <input class="form-input" type="text" id="editTxPayee" placeholder="e.g. Swiggy, Rahul, HDFC Bank">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Category</label>
+      <select class="form-input" id="editTxCategory"></select>
+    </div>
+    <div class="form-row">
+      <label class="form-label" id="editTxPayMethodLabel">Paid via</label>
+      <select class="form-input" id="editTxPayMethod"><option value="">— Cash / Not specified —</option></select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Date</label>
+      <input class="form-input" type="date" id="editTxDate">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('editTxModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateTransaction()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT METHODS MODAL -->
+<div class="modal-overlay" id="payMethodModal">
+  <div class="modal">
+    <div class="modal-title" id="payMethodModalTitle">Payment Methods</div>
+    <div id="payMethodList" style="margin-bottom:16px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:16px">
+      <div class="form-row">
+        <label class="form-label">Type</label>
+        <div class="type-toggle">
+          <button class="type-btn income active" id="pmTypeUpi" onclick="selectPmType('upi')">📲 UPI</button>
+          <button class="type-btn expense" id="pmTypeBank" onclick="selectPmType('bank')">🏦 Bank A/C</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" id="pmLabel">UPI ID</label>
+        <input class="form-input" type="text" id="pmValue" placeholder="name@upi">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Nickname</label>
+        <input class="form-input" type="text" id="pmNickname" placeholder="e.g. PhonePe, HDFC Savings">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="addPayMethod()">+ Add</button>
+    </div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('payMethodModal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- CARRY FORWARD MODAL -->
+<div class="modal-overlay" id="carryModal">
+  <div class="modal">
+    <div class="modal-title">Month-end Transfer</div>
+    <div id="carryModalBody"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('carryModal')">Skip</button>
+      <button class="btn btn-primary" id="carryConfirmBtn">Carry Forward</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-overlay" id="editProfileModal">
+  <div class="modal" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-title">Edit Profile</div>
+    <input type="hidden" id="epId">
+    <div class="form-row">
+      <label class="form-label">Name</label>
+      <input class="form-input" type="text" id="epName" placeholder="Full name">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Occupation</label>
+      <input class="form-input" type="text" id="epOccupation" placeholder="e.g. Software Engineer, Teacher...">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Phone</label>
+      <input class="form-input" type="tel" id="epPhone" placeholder="+91 98765 43210">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Email (for Gmail sync)</label>
+      <input class="form-input" type="email" id="epEmail" placeholder="you@gmail.com">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Approx Monthly Income (₹)</label>
+      <input class="form-input" type="number" id="epApproxIncome" placeholder="e.g. 75000">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Salary Account (last 4 digits or nickname)</label>
+      <input class="form-input" type="text" id="epSalaryAccount" placeholder="e.g. HDFC ••••4321">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Savings Account (last 4 digits or nickname)</label>
+      <input class="form-input" type="text" id="epSavingsAccount" placeholder="e.g. SBI ••••8765">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Monthly Savings Goal (₹)</label>
+      <input class="form-input" type="number" id="epSavingsGoal" placeholder="e.g. 20000">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('editProfileModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK (modular, loaded as ES module) -->
+<!-- Firebase compat SDKs — work with file:// and don't need ES module support -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+// Shim: map compat API to the same function names the app uses
+const _app = firebase.initializeApp({
+  apiKey: "AIzaSyBQ6RQOtwZ642_qMp6xL93195S41zRyiMo",
+  authDomain: "paisa-28800.firebaseapp.com",
+  projectId: "paisa-28800",
+  storageBucket: "paisa-28800.firebasestorage.app",
+  messagingSenderId: "260176127789",
+  appId: "1:260176127789:web:2ab60c6cac6f758a6b55a4",
+  measurementId: "G-EY74TK5D45"
+});
+const _db = firebase.firestore();
+
+// Shim functions to match modular API names used in the app
+function collection(db, path) { return db.collection(path); }
+function doc(db, ...args) {
+  if (typeof db.collection === 'function') {
+    // db is firestore instance
+    if (args.length === 2) return db.collection(args[0]).doc(args[1]);
+    return db.doc(args.join('/'));
+  }
+  // db is actually a CollectionReference (e.g. doc(transactionsCol))
+  return args.length ? db.doc(args[0]) : db.doc(); // auto-ID if no args
+}
+function onSnapshot(ref, cb, errCb) { return ref.onSnapshot(cb, errCb); }
+async function addDoc(ref, data) { return ref.add(data); }
+async function setDoc(ref, data, opts) {
+  if (opts && opts.merge) return ref.set(data, { merge: true });
+  return ref.set(data);
+}
+async function deleteDoc(ref) { return ref.delete(); }
+function writeBatch(db) { return db.batch(); }
+function serverTimestamp() { return firebase.firestore.FieldValue.serverTimestamp(); }
+const db = _db;
+
+// ─── Firebase init (handled by compat SDK above) ───────────────────────────
+
+// ─── Collections ──────────────────────────────────────────────────────────────
+const profilesCol    = collection(db, 'profiles');
+const categoriesCol  = collection(db, 'categories');
+const transactionsCol= collection(db, 'transactions');
+const settingsDoc    = doc(db, 'settings', 'app');
+const THEME_STORAGE_KEY = 'paisa:lastTheme';
+
+// ─── UI state (ephemeral — never stored) ─────────────────────────────────────
+const COLORS = ['#E87040','#4A90D9','#5C9E6C','#9B59B6','#E67E22','#E84393','#2ECC71','#C0392B'];
+
+window.uiState = {
+  activeProfile: null,
+  currentMonth: (() => { const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'); })(),
+  txType: 'expense',
+  selectedColor: COLORS[0],
+  currentView: 'dashboard',
+  txFilter: 'all',
+  renamingProfileId: null,
+  isFamilyView: false,
+  familySelectedMember: null,
+  familySubView: 'dashboard',
+  currentTheme: localStorage.getItem(THEME_STORAGE_KEY) || 'default',
+  txSort: 'date-desc',       // date-desc | date-asc | amount-desc | amount-asc
+  txGroupBy: 'none',         // none | day
+  txSearchQuery: '',
+  txCategoryFilter: 'all',
+};
+
+// ─── Live data (populated by Firestore listeners) ─────────────────────────────
+window.liveData = {
+  profiles: [],
+  categories: [],
+  transactions: [],
+};
+
+// ─── Default seed data (written once if collections are empty) ────────────────
+const DEFAULT_PROFILES = [
+  { id: 'p1', name: 'Me',     color: '#E87040' },
+  { id: 'p2', name: 'Family', color: '#4A90D9' },
+];
+const DEFAULT_CATEGORIES = [
+  { id: 'c1', name: 'Food & Dining', icon: '🍽️' },
+  { id: 'c2', name: 'Groceries',     icon: '🛒' },
+  { id: 'c3', name: 'Transport',     icon: '🚌' },
+  { id: 'c4', name: 'Utilities',     icon: '💡' },
+  { id: 'c5', name: 'Shopping',      icon: '🛍️' },
+  { id: 'c6', name: 'Entertainment', icon: '🎬' },
+  { id: 'c7', name: 'Health',        icon: '💊' },
+  { id: 'c8', name: 'Salary',        icon: '💼' },
+  { id: 'c9', name: 'Other',         icon: '📦' },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
+function categoryBudgetForProfile(category, profileId) {
+  if (!category || !profileId) return 0;
+  if (category.budgets && Object.prototype.hasOwnProperty.call(category.budgets, profileId)) {
+    return Number(category.budgets[profileId]) || 0;
+  }
+  return Number(category.budget || 0);
+}
+function prevMonthId() {
+  const [y,m] = window.uiState.currentMonth.split('-').map(Number);
+  const d = new Date(y, m-2);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function getInitials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function genId() { return Math.random().toString(36).slice(2,9); }
+
+function setSyncStatus(status, text) {
+  const badge = document.getElementById('syncBadge');
+  const label = document.getElementById('syncText');
+  if (!badge) return;
+  badge.className = 'sync-badge ' + status;
+  label.textContent = text;
+}
+
+function profileTxs(profileId, month) {
+  return window.liveData.transactions.filter(t => t.profileId === profileId && t.date.startsWith(month));
+}
+function totalIncome(txs)   { return txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
+function totalExpense(txs)  { return txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
+function totalTransfers(txs){ return txs.filter(t=>t.type==='transfer' && t.transferRole==='sender'); }
+
+// ─── Seed Firestore if empty ──────────────────────────────────────────────────
+async function seedIfEmpty() {
+  // We check the first snapshot; if profiles is empty, seed everything
+  return new Promise(resolve => {
+    const unsub = onSnapshot(profilesCol, async snap => {
+      unsub();
+      if (!snap.empty) { resolve(); return; }
+      const batch = writeBatch(db);
+      DEFAULT_PROFILES.forEach(p => batch.set(doc(db, 'profiles', p.id), p));
+      DEFAULT_CATEGORIES.forEach(c => batch.set(doc(db, 'categories', c.id), c));
+      // Seed sample transactions
+      const sampleTx = [
+        { id: 't1', profileId:'p1', type:'income',  amount:75000, desc:'Monthly Salary',    category:'c8', date:'2025-05-01' },
+        { id: 't2', profileId:'p1', type:'expense', amount:12500, desc:'Rent',              category:'c4', date:'2025-05-03' },
+        { id: 't3', profileId:'p1', type:'expense', amount:3200,  desc:'Zomato & Swiggy',   category:'c1', date:'2025-05-05' },
+        { id: 't4', profileId:'p1', type:'expense', amount:4800,  desc:'Big Basket order',  category:'c2', date:'2025-05-07' },
+        { id: 't5', profileId:'p1', type:'expense', amount:1500,  desc:'Metro pass',        category:'c3', date:'2025-05-08' },
+        { id: 't6', profileId:'p2', type:'income',  amount:45000, desc:'Salary',            category:'c8', date:'2025-05-01' },
+        { id: 't7', profileId:'p2', type:'expense', amount:8000,  desc:'School fees',       category:'c9', date:'2025-05-05' },
+      ];
+      sampleTx.forEach(t => batch.set(doc(db, 'transactions', t.id), t));
+      await batch.commit();
+      resolve();
+    }, err => { console.error(err); resolve(); });
+  });
+}
+
+// ─── Real-time listeners ──────────────────────────────────────────────────────
+let listenersReady = 0;
+const TOTAL_LISTENERS = 4;
+let appShown = false;
+
+function showApp() {
+  if (appShown) return;
+  appShown = true;
+  document.getElementById('loadingScreen').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+    window.uiState.isFamilyView = true;
+    window.uiState.activeProfile = null;
+    window.uiState.familySubView = 'dashboard';
+    applyTheme(window.uiState.currentTheme || 'default');
+    render();
+    checkCarryForwardPrompt();
+  }, 400);
+}
+
+function onListenerReady() {
+  listenersReady++;
+  if (listenersReady >= TOTAL_LISTENERS) showApp();
+}
+
+// Hard timeout — show app after 6s even if a listener failed
+setTimeout(() => {
+  if (!appShown) {
+    console.warn('Firestore timeout — showing app anyway');
+    showApp();
+  }
+}, 6000);
+
+function startListeners() {
+  // Profiles
+  let profilesReady = false;
+  onSnapshot(profilesCol, snap => {
+    window.liveData.profiles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (window.uiState.activeProfile && !window.liveData.profiles.find(p => p.id === window.uiState.activeProfile)) {
+      window.uiState.activeProfile = window.liveData.profiles[0]?.id || null;
+    }
+    if (appShown) render();
+    if (!profilesReady) { profilesReady = true; onListenerReady(); }
+    setSyncStatus('synced', 'Live sync on');
+  }, err => {
+    setSyncStatus('error', 'Sync error'); console.error(err);
+    if (!profilesReady) { profilesReady = true; onListenerReady(); }
+  });
+
+  // Categories
+  let categoriesReady = false;
+  onSnapshot(categoriesCol, snap => {
+    window.liveData.categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (appShown) render();
+    if (!categoriesReady) { categoriesReady = true; onListenerReady(); }
+  }, err => { console.error(err); if (!categoriesReady) { categoriesReady = true; onListenerReady(); } });
+
+  // Transactions
+  let transactionsReady = false;
+  onSnapshot(transactionsCol, snap => {
+    window.liveData.transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (appShown) render();
+    if (!transactionsReady) { transactionsReady = true; onListenerReady(); }
+  }, err => { console.error(err); if (!transactionsReady) { transactionsReady = true; onListenerReady(); } });
+
+  // Settings (theme etc) — single doc listener
+  // Use a flag so we only count it once even if it fires multiple times
+  let settingsReady = false;
+  onSnapshot(settingsDoc, snap => {
+    if (snap.exists) {
+      const data = snap.data();
+      window.liveData.settings = data;
+      if (data.theme && data.theme !== window.uiState.currentTheme) {
+        applyTheme(data.theme);
+        try { localStorage.setItem(THEME_STORAGE_KEY, data.theme); } catch(e){}
+      }
+    }
+    if (!settingsReady) { settingsReady = true; onListenerReady(); }
+  }, err => {
+    console.warn('settings listener error (non-fatal):', err);
+    if (!settingsReady) { settingsReady = true; onListenerReady(); }
+  });
+}
+
+// ─── Firestore writes ─────────────────────────────────────────────────────────
+window.saveTransaction = async function() {
+  const amt       = parseFloat(document.getElementById('txAmount').value);
+  const desc      = document.getElementById('txDesc').value.trim();
+  const date      = document.getElementById('txDate').value;
+  const payMethod = document.getElementById('txPayMethod').value || '';
+  const txType    = window.uiState.txType;
+  if (!amt || !date) { alert('Please fill amount and date.'); return; }
+  if (txType !== 'transfer' && !desc) { alert('Please fill the description.'); return; }
+  setSyncStatus('syncing', 'Saving…');
+
+  if (txType === 'transfer') {
+    // Create linked pair of transactions
+    const transferId   = genId();
+    const transferKind = window.uiState.transferType; // 'family' | 'self'
+    const fromId  = document.getElementById('txTransferFrom').value;
+    const toId    = document.getElementById('txTransferTo').value;
+    if (!fromId || !toId) { alert('Please select both From and To.'); return; }
+    if (fromId === toId)  { alert('From and To cannot be the same.'); return; }
+    const transferDesc = desc || (transferKind === 'self' ? 'Self Transfer' : 'Family Transfer');
+    const ownerProfileId = window.uiState.isFamilyView ? window.uiState.familySelectedMember : window.uiState.activeProfile;
+    const fromProfile = window.liveData.profiles.find(p => p.id === fromId);
+    const toProfile = window.liveData.profiles.find(p => p.id === toId);
+    const ownerProfile = window.liveData.profiles.find(p => p.id === ownerProfileId);
+    const ownerMethods = getProfilePayMethods(ownerProfileId);
+    const fromMethod = ownerMethods.find(m => m.id === fromId);
+    const toMethod = ownerMethods.find(m => m.id === toId);
+    const senderProfileId = transferKind === 'family' ? fromId : ownerProfileId;
+    const receiverProfileId = transferKind === 'family' ? toId : ownerProfileId;
+    const senderMethods = getProfilePayMethods(senderProfileId);
+    const senderMethod = senderMethods.find(m => m.id === payMethod) || senderMethods.find(m => m.isDefault) || senderMethods[0];
+    const senderPayee = transferKind === 'family'
+      ? (toProfile?.name || 'Family member')
+      : (toMethod ? `${toMethod.nickname} (${toMethod.value})` : 'Destination account');
+    const receiverPayee = transferKind === 'family'
+      ? (fromProfile?.name || 'Family member')
+      : (fromMethod ? `${fromMethod.nickname} (${fromMethod.value})` : 'Source account');
+    const senderPayMethod = transferKind === 'family' ? (senderMethod?.id || '') : fromId;
+    const receiverPayMethod = transferKind === 'family' ? '' : toId;
+    const batch = writeBatch(db);
+    const ref1  = doc(transactionsCol);
+    const ref2  = doc(transactionsCol);
+    // Resolve display names at save time so they always show correctly
+    const fromDisplayName = resolveTransferEndpoint(fromId, ownerProfileId);
+    const toDisplayName   = resolveTransferEndpoint(toId,   ownerProfileId);
+    const catId = window.liveData.categories.find(c=>c.name==='Other')?.id || window.liveData.categories[0]?.id || '';
+    // Sender side (outgoing)
+    batch.set(ref1, {
+      profileId: senderProfileId,
+      type: 'transfer', transferRole: 'sender',
+      amount: amt, desc: transferDesc || (fromDisplayName + ' → ' + toDisplayName),
+      payee: senderPayee,
+      category: catId, date, payMethod: senderPayMethod,
+      transferId, transferKind,
+      transferFromId: fromId, transferToId: toId,
+      transferFromName: fromDisplayName, transferToName: toDisplayName,
+      linkedTxId: ref2.id,
+      amendments: [], createdAt: serverTimestamp()
+    });
+    // Receiver side (incoming)
+    batch.set(ref2, {
+      profileId: receiverProfileId,
+      type: 'transfer', transferRole: 'receiver',
+      amount: amt, desc: transferDesc || (fromDisplayName + ' → ' + toDisplayName),
+      payee: receiverPayee,
+      category: catId, date, payMethod: receiverPayMethod,
+      transferId, transferKind,
+      transferFromId: fromId, transferToId: toId,
+      transferFromName: fromDisplayName, transferToName: toDisplayName,
+      linkedTxId: ref1.id,
+      amendments: [], createdAt: serverTimestamp()
+    });
+    await batch.commit();
+  } else {
+    const payee   = document.getElementById('txPayee').value.trim();
+    const cat     = document.getElementById('txCategory').value;
+    const profileId = window.uiState.isFamilyView
+      ? window.uiState.familySelectedMember
+      : window.uiState.activeProfile;
+    if (!profileId) { alert('Please select a family member.'); return; }
+    await addDoc(transactionsCol, {
+      profileId, type: txType,
+      amount: amt, desc, payee, category: cat, date, payMethod,
+      amendments: [], createdAt: serverTimestamp()
+    });
+  }
+  closeModal('txModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.deleteTx = function(id, desc) {
+  document.getElementById('confirmTitle').textContent = 'Delete transaction?';
+  document.getElementById('confirmBody').textContent = `"${desc}" will be permanently deleted. This cannot be undone.`;
+  document.getElementById('confirmActionBtn').onclick = async () => {
+    setSyncStatus('syncing', 'Deleting…');
+    await deleteDoc(doc(db, 'transactions', id));
+    closeModal('confirmModal');
+    setSyncStatus('synced', 'Live sync on');
+  };
+  document.getElementById('confirmModal').classList.add('open');
+};
+
+window.deleteTransfer = function(id, linkedId, desc) {
+  document.getElementById('confirmTitle').textContent = 'Delete transfer?';
+  document.getElementById('confirmBody').textContent = `This will delete both sides of "${desc}". This cannot be undone.`;
+  document.getElementById('confirmActionBtn').onclick = async () => {
+    setSyncStatus('syncing', 'Deleting…');
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'transactions', id));
+    // Try linkedTxId first, then search by transferId
+    if (linkedId) {
+      batch.delete(doc(db, 'transactions', linkedId));
+    } else {
+      // fallback: find the other side by transferId
+      const thisTx = window.liveData.transactions.find(t => t.id === id);
+      if (thisTx?.transferId) {
+        const sibling = window.liveData.transactions.find(t => t.transferId === thisTx.transferId && t.id !== id);
+        if (sibling) batch.delete(doc(db, 'transactions', sibling.id));
+      }
+    }
+    await batch.commit();
+    closeModal('confirmModal');
+    setSyncStatus('synced', 'Live sync on');
+  };
+  document.getElementById('confirmModal').classList.add('open');
+};
+
+window.saveProfile = async function() {
+  const name = document.getElementById('profileName').value.trim();
+  if (!name) { alert('Please enter a name.'); return; }
+  setSyncStatus('syncing', 'Saving…');
+  const id = genId();
+  await setDoc(doc(db, 'profiles', id), { name, color: window.uiState.selectedColor });
+  closeModal('profileModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.deleteProfile = async function(id) {
+  setSyncStatus('syncing', 'Deleting…');
+  const batch = writeBatch(db);
+  // Delete profile
+  batch.delete(doc(db, 'profiles', id));
+  // Delete all its transactions
+  window.liveData.transactions.filter(t => t.profileId === id).forEach(t => {
+    batch.delete(doc(db, 'transactions', t.id));
+  });
+  await batch.commit();
+  closeModal('confirmModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.saveCategory = async function() {
+  const name   = document.getElementById('catName').value.trim();
+  const icon   = [...(document.getElementById('catIcon').value.trim() || '📦')].slice(0,2).join('');
+  const budget = parseFloat(document.getElementById('catBudget')?.value) || 0;
+  const editId = document.getElementById('catEditId').value;
+  const budgetProfileId = window.uiState.isFamilyView ? window.uiState.familySelectedMember : window.uiState.activeProfile;
+  const budgetProfile = window.liveData.profiles.find(p => p.id === budgetProfileId);
+  if (!name) { alert('Please enter a name.'); return; }
+  setSyncStatus('syncing', 'Saving…');
+  const id = editId || genId();
+  const existing = editId ? window.liveData.categories.find(c => c.id === editId) : null;
+  const amendments = [...(existing?.amendments || [])];
+  if (existing) {
+    const now = new Date().toISOString();
+    if (String(existing.name || '') !== name) {
+      amendments.push({ field: 'Name', from: existing.name || '—', to: name, at: now });
+    }
+    if (String(existing.icon || '') !== icon) {
+      amendments.push({ field: 'Icon', from: existing.icon || '—', to: icon, at: now });
+    }
+    const oldBudget = categoryBudgetForProfile(existing, budgetProfileId);
+    if (budgetProfileId && oldBudget !== budget) {
+      amendments.push({
+        field: 'Budget' + (budgetProfile ? ' (' + budgetProfile.name + ')' : ''),
+        from: oldBudget ? fmt(oldBudget) : '—',
+        to: budget ? fmt(budget) : '—',
+        at: now
+      });
+    }
+  }
+  const payload = { name, icon, amendments };
+  if (budgetProfileId) {
+    payload.budgets = { ...(existing?.budgets || {}), [budgetProfileId]: budget };
+  }
+  await setDoc(doc(db, 'categories', id), payload, { merge: true });
+  closeModal('catModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.deleteCat = async function(id) {
+  setSyncStatus('syncing', 'Deleting…');
+  await deleteDoc(doc(db, 'categories', id));
+  closeModal('confirmModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.confirmDeleteCat = function(id, name) {
+  document.getElementById('confirmTitle').textContent = `Delete "${name}"?`;
+  document.getElementById('confirmBody').textContent  = 'This category will be removed. Existing transactions keep their data.';
+  document.getElementById('confirmActionBtn').onclick = () => deleteCat(id);
+  document.getElementById('confirmModal').classList.add('open');
+};
+
+window.clearMonthTransactions = async function() {
+  const txs = profileTxs(window.uiState.activeProfile, window.uiState.currentMonth);
+  if (!txs.length) return;
+  setSyncStatus('syncing', 'Clearing…');
+  const batch = writeBatch(db);
+  txs.forEach(t => batch.delete(doc(db, 'transactions', t.id)));
+  await batch.commit();
+  closeModal('confirmModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+// ─── UI helpers (global) ─────────────────────────────────────────────────────
+window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); };
+function updateTxTypeLabels(type, prefix) {
+  const payeeLabel = document.getElementById(prefix ? prefix + 'TxPayeeLabel' : 'txPayeeLabel');
+  const payMethodLabel = document.getElementById(prefix ? prefix + 'TxPayMethodLabel' : 'txPayMethodLabel');
+  if (payeeLabel) payeeLabel.textContent = type === 'income' ? 'Received from' : 'Paid to';
+  if (payMethodLabel) payMethodLabel.textContent = type === 'income' ? 'Paid to' : 'Paid via';
+}
+window.uiState.transferType = 'family';
+
+window.selectType = function(t) {
+  window.uiState.txType = t;
+  document.getElementById('typeIncome').classList.toggle('active',   t==='income');
+  document.getElementById('typeExpense').classList.toggle('active',  t==='expense');
+  document.getElementById('typeTransfer')?.classList.toggle('active', t==='transfer');
+  updateTxTypeLabels(t, '');
+  // show/hide transfer fields
+  const tf = document.getElementById('transferFields');
+  if (tf) tf.classList.toggle('visible', t==='transfer');
+  // hide category/payee rows when transfer
+  const catRow    = document.getElementById('txCategory')?.closest('.form-row');
+  const payeeRow  = document.getElementById('txPayee')?.closest('.form-row');
+  const memberRow = document.getElementById('txMemberRow');
+  if (catRow)   catRow.style.display   = t==='transfer' ? 'none' : '';
+  if (payeeRow) payeeRow.style.display = t==='transfer' ? 'none' : '';
+  if (memberRow && t==='transfer') memberRow.style.display = 'none';
+  if (t==='transfer') populateTransferDropdowns();
+};
+
+window.selectTransferType = function(tt) {
+  window.uiState.transferType = tt;
+  document.getElementById('txTransferTypeFamily')?.classList.toggle('active', tt==='family');
+  document.getElementById('txTransferTypeSelf')?.classList.toggle('active',   tt==='self');
+  populateTransferDropdowns();
+};
+
+function populateTransferDropdowns() {
+  const fromSel = document.getElementById('txTransferFrom');
+  const toSel   = document.getElementById('txTransferTo');
+  if (!fromSel || !toSel) return;
+  const profiles = window.liveData.profiles;
+  if (window.uiState.transferType === 'family') {
+    const opts = profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    fromSel.innerHTML = opts;
+    toSel.innerHTML   = opts;
+    const active = window.uiState.isFamilyView
+      ? (window.uiState.familySelectedMember || profiles[0]?.id)
+      : window.uiState.activeProfile;
+    fromSel.value = active || profiles[0]?.id;
+    const other = profiles.find(p => p.id !== fromSel.value);
+    if (other) toSel.value = other.id;
+  } else {
+    const pid     = window.uiState.isFamilyView
+      ? window.uiState.familySelectedMember
+      : window.uiState.activeProfile;
+    const methods = getProfilePayMethods(pid);
+    if (methods.length < 2) {
+      fromSel.innerHTML = '<option value="">Add accounts in My Profile first</option>';
+      toSel.innerHTML   = '<option value="">Add accounts in My Profile first</option>';
+      return;
+    }
+    const opts = methods.map(m => `<option value="${m.id}">${m.type==='upi'?'📲':'🏦'} ${m.nickname}</option>`).join('');
+    fromSel.innerHTML = opts;
+    toSel.innerHTML   = opts;
+    fromSel.value = methods[0].id;
+    toSel.value   = methods[1].id;
+    // sync From with Paid Via
+    const payMethodSel = document.getElementById('txPayMethod');
+    if (payMethodSel) payMethodSel.value = methods[0].id;
+    // keep in sync when From changes
+    fromSel.onchange = () => {
+      if (payMethodSel) payMethodSel.value = fromSel.value;
+    };
+  }
+}
+window.switchProfile = function(id) {
+  window.uiState.activeProfile = id;
+  window.uiState.isFamilyView = false;
+  // deactivate family btn
+  const fb = document.getElementById('familyProfileBtn');
+  if (fb) fb.classList.remove('active');
+  render();
+};
+
+window.switchToFamily = function() {
+  window.uiState.isFamilyView = true;
+  window.uiState.activeProfile = null;
+  window.uiState.familySelectedMember = null;
+  window.uiState.familySubView = 'dashboard';
+  // mark dashboard nav active
+  const btns = document.querySelectorAll('.nav-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  if (btns[0]) btns[0].classList.add('active');
+  render();
+};
+window.switchNav = function(view, btn) {
+  // if in family view, nav controls family sub-view
+  if (window.uiState.isFamilyView) {
+    if (view === 'transactions' && window.uiState.familySubView !== 'transactions') resetTransactionFilters();
+    window.uiState.familySubView = view;
+  } else {
+    if (view === 'transactions' && window.uiState.currentView !== 'transactions') resetTransactionFilters();
+    window.uiState.currentView = view;
+  }
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+};
+window.shiftMonth = function(d) {
+  const [y,m] = window.uiState.currentMonth.split('-').map(Number);
+  const dt = new Date(y, m-1+d);
+  const ny = dt.getFullYear();
+  const nm = String(dt.getMonth() + 1).padStart(2, '0');
+  window.uiState.currentMonth = `${ny}-${nm}`;
+  render();
+};
+window.setFilter = function(f) { window.uiState.txFilter = f; render(); };
+
+window.viewByCategory = function(catId) {
+  // switch to transactions view with this category pre-filtered
+  window.uiState.txCategoryFilter = catId;
+  window.uiState.txFilter = 'all';
+  if (window.uiState.isFamilyView) {
+    window.uiState.familySubView = 'transactions';
+  } else {
+    window.uiState.currentView = 'transactions';
+  }
+  // update nav highlight
+  document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i===1));
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  const mobTxBtn = document.getElementById('mob-transactions');
+  if (mobTxBtn) mobTxBtn.classList.add('active');
+  render();
+};
+window.setSort = function(s) { window.uiState.txSort = s; render(); };
+window.setGroupBy = function(g) { window.uiState.txGroupBy = window.uiState.txGroupBy === g ? 'none' : g; render(); };
+
+window.exportCSV = function(txs) {
+  const cats     = window.liveData.categories;
+  const profiles = window.liveData.profiles;
+  const month    = window.uiState.currentMonth;
+  const monthName = monthLabel(month);
+
+  function csvRow(arr) {
+    // wrap every cell in quotes, escape internal quotes
+    return arr.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',');
+  }
+
+  function buildSection(sectionTxs, sectionTitle) {
+    const inc = totalIncome(sectionTxs);
+    const exp = totalExpense(sectionTxs);
+    const net = inc - exp;
+    const lines = [];
+    lines.push(csvRow([sectionTitle + ' — ' + monthName]));
+    lines.push(csvRow(['Date','Type','Amount (₹)','Description','Payee','Category','Payment Method','Balance Note']));
+    let running = 0;
+    // sort oldest first for running balance
+    const sorted = [...sectionTxs].sort((a,b) => a.date.localeCompare(b.date));
+    sorted.forEach(t => {
+      const cat    = cats.find(c=>c.id===t.category)||{name:'Other'};
+      const prof   = profiles.find(p=>p.id===t.profileId)||{name:'—'};
+      const method = (prof.payMethods||[]).find(m=>m.id===t.payMethod);
+      // format date as DD-MMM-YYYY so Excel doesn't mangle it
+      const d = new Date(t.date+'T00:00:00');
+      const dateStr = d.getDate().toString().padStart(2,'0') + '-' +
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + '-' +
+        d.getFullYear();
+      running += t.type === 'income' ? t.amount : -t.amount;
+      lines.push(csvRow([
+        dateStr,
+        t.type === 'income' ? 'Income' : 'Expense',
+        t.type === 'income' ? t.amount : -t.amount,
+        t.desc || '',
+        t.payee || '',
+        cat.name,
+        method ? method.nickname : 'Cash',
+        running >= 0 ? 'Surplus ' + fmt(running) : 'Deficit ' + fmt(Math.abs(running))
+      ]));
+    });
+    lines.push(''); // blank line
+    lines.push(csvRow(['','','','','Summary','','','']));
+    lines.push(csvRow(['','Total Income','',fmt(inc),'','','','']));
+    lines.push(csvRow(['','Total Expenses','',fmt(exp),'','','','']));
+    lines.push(csvRow(['','Net Balance','',fmt(net),'','','',net>=0?'Surplus':'Deficit']));
+    lines.push('');
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  let fullCSV = '﻿'; // BOM for Excel UTF-8
+
+  // Per-person sections
+  profiles.forEach(prof => {
+    const pTxs = txs.filter(t => t.profileId === prof.id);
+    if (pTxs.length > 0) fullCSV += buildSection(pTxs, prof.name + "'s Transactions") + '\n';
+  });
+
+  // Total / family section
+  fullCSV += buildSection(txs, 'Family Total');
+
+  const blob = new Blob([fullCSV], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'Paisa-Report-' + month + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+window.setCatFilter = function(c) { window.uiState.txCategoryFilter = c; render(); };
+function resetTransactionFilters() {
+  window.uiState.txFilter = 'all';
+  window.uiState.txCategoryFilter = 'all';
+  window.uiState.txSearchQuery = '';
+  window.uiState.txSort = 'date-desc';
+  window.uiState.txGroupBy = 'none';
+}
+window.setSearch = function(q) {
+  window.uiState.txSearchQuery = q.toLowerCase();
+  // Re-render but restore search focus & cursor after DOM rebuild
+  const el = document.querySelector('.tx-search');
+  const pos = el ? el.selectionStart : 0;
+  render();
+  // After render a new .tx-search is in DOM — restore focus
+  requestAnimationFrame(() => {
+    const newEl = document.querySelector('.tx-search');
+    if (newEl) { newEl.focus(); try { newEl.setSelectionRange(pos, pos); } catch(e){} }
+  });
+};
+
+function applyFiltersAndSort(txs) {
+  // type filter
+  if (window.uiState.txFilter === 'income')   txs = txs.filter(t => t.type === 'income');
+  if (window.uiState.txFilter === 'expense')  txs = txs.filter(t => t.type === 'expense');
+  if (window.uiState.txFilter === 'transfer') txs = txs.filter(t => t.type === 'transfer');
+  // in 'all' view, show everything including transfers
+  // category filter
+  if (window.uiState.txCategoryFilter !== 'all') txs = txs.filter(t => t.category === window.uiState.txCategoryFilter);
+  // search
+  if (window.uiState.txSearchQuery) {
+    const q = window.uiState.txSearchQuery;
+    txs = txs.filter(t =>
+      (t.desc||'').toLowerCase().includes(q) ||
+      (t.payee||'').toLowerCase().includes(q) ||
+      String(t.amount).includes(q)
+    );
+  }
+  // sort
+  const sort = window.uiState.txSort;
+  txs = [...txs].sort((a,b) => {
+    if (sort === 'date-desc')   return b.date.localeCompare(a.date);
+    if (sort === 'date-asc')    return a.date.localeCompare(b.date);
+    if (sort === 'amount-desc') return b.amount - a.amount;
+    if (sort === 'amount-asc')  return a.amount - b.amount;
+    return b.date.localeCompare(a.date);
+  });
+  return txs;
+}
+
+function filterPanelHTML(extraClass) {
+  const cats = window.liveData.categories;
+  return `<div class="filter-panel ${extraClass||''}">
+    <div class="filter-panel-row" style="width:100%">
+      <input class="tx-search" placeholder="🔍 Search transactions…" value="${window.uiState.txSearchQuery||''}" oninput="setSearch(this.value)">
+    </div>
+    <div class="filter-panel-row">
+      <button class="filter-chip ${window.uiState.txFilter==='all'?'active':''}"     onclick="setFilter('all')">All</button>
+      <button class="filter-chip ${window.uiState.txFilter==='income'?'active':''}"  onclick="setFilter('income')">↑ Income</button>
+      <button class="filter-chip ${window.uiState.txFilter==='expense'?'active':''}" onclick="setFilter('expense')">↓ Expense</button>
+      <button class="filter-chip ${window.uiState.txFilter==='transfer'?'active':''}" onclick="setFilter('transfer')">↔ Transfers</button>
+      <select class="cat-filter-select" onchange="setCatFilter(this.value)">
+        <option value="all">All categories</option>
+        ${cats.map(c=>`<option value="${c.id}" ${window.uiState.txCategoryFilter===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="filter-panel-row">
+      <select class="sort-select" onchange="setSort(this.value)">
+        <option value="date-desc"   ${window.uiState.txSort==='date-desc'?'selected':''}>Newest first</option>
+        <option value="date-asc"    ${window.uiState.txSort==='date-asc'?'selected':''}>Oldest first</option>
+        <option value="amount-desc" ${window.uiState.txSort==='amount-desc'?'selected':''}>Amount: high → low</option>
+        <option value="amount-asc"  ${window.uiState.txSort==='amount-asc'?'selected':''}>Amount: low → high</option>
+      </select>
+      <button class="group-toggle ${window.uiState.txGroupBy==='day'?'active':''}" onclick="setGroupBy('day')">📅 By day</button>
+    </div>
+  </div>`;
+}
+
+function txStatsBar(txs) {
+  const inc = totalIncome(txs);
+  const exp = totalExpense(txs);
+  const net = inc - exp;
+  if (txs.length === 0) return '';
+  return `<div style="display:flex;gap:16px;align-items:center;padding:8px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap">
+    <span style="color:var(--text3)">${txs.length} transaction${txs.length!==1?'s':''}</span>
+    <span style="color:var(--income)">↑ ${fmt(inc)}</span>
+    <span style="color:var(--expense)">↓ ${fmt(exp)}</span>
+    <span style="color:${net>=0?'var(--income)':'var(--expense)'};font-weight:600">Net ${net>=0?'+₹':'-₹'}${Math.round(Math.abs(net)).toLocaleString('en-IN')}</span>
+    <button onclick="exportCSV(window._lastFilteredTxs||[])" style="margin-left:auto;background:none;border:1px solid var(--border2);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer">⬇ CSV</button>
+  </div>`;
+}
+
+function renderGrouped(txs, rowFn) {
+  window._lastFilteredTxs = txs; // for CSV export
+  if (window.uiState.txGroupBy !== 'day') {
+    return txs.length === 0
+      ? `<div class="empty"><i class="ti ti-inbox"></i><p>No transactions found.</p></div>`
+      : txStatsBar(txs) + txs.map(t => rowFn(t)).join('');
+  }
+  // group by day
+  const groups = {};
+  txs.forEach(t => { if (!groups[t.date]) groups[t.date] = []; groups[t.date].push(t); });
+  const sortedDates = Object.keys(groups).sort((a,b) =>
+    window.uiState.txSort.includes('asc') ? a.localeCompare(b) : b.localeCompare(a)
+  );
+  if (sortedDates.length === 0) return `<div class="empty"><i class="ti ti-inbox"></i><p>No transactions found.</p></div>`;
+  return txStatsBar(txs) + sortedDates.map(date => {
+    const dayTxs = groups[date];
+    const dayInc = totalIncome(dayTxs);
+    const dayExp = totalExpense(dayTxs);
+    const dayNet = dayInc - dayExp;
+    const d = new Date(date+'T00:00:00');
+    const label = d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+    const netLabel = dayNet >= 0 ? `+${fmt(dayNet)}` : fmt(dayNet);
+    return `<div class="day-group-header">
+      <span>${label}</span>
+      <span class="day-group-total ${dayNet>=0?'pos':'neg'}">${netLabel}</span>
+    </div>` + dayTxs.map(t => rowFn(t)).join('');
+  }).join('');
+}
+
+window.toggleSidebar = function() {
+  const sb = document.getElementById('sidebar');
+  const icon = document.getElementById('sidebarToggleIcon');
+  const btn = document.getElementById('sidebarToggle');
+  const collapsed = sb.classList.toggle('collapsed');
+  icon.className = collapsed ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
+  btn.style.left = collapsed ? '16px' : '16px';
+};
+
+window.applyTheme = function(theme) {
+  // just applies visually, no save — used internally
+  document.body.classList.remove('dark', 'pro');
+  if (theme === 'dark')    document.body.classList.add('dark');
+  if (theme === 'pro')     document.body.classList.add('pro');
+  if (theme === 'prodark') document.body.classList.add('pro', 'dark');
+  window.uiState.currentTheme = theme;
+  document.querySelectorAll('.theme-chip').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('tc-' + theme);
+  if (el) el.classList.add('active');
+};
+
+window.setTheme = function(theme) {
+  applyTheme(theme);
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  // Also persist to Firestore so all devices sync
+  setDoc(settingsDoc, { theme }, { merge: true }).catch(e => console.warn('theme save:', e));
+};
+window.selectColor = function(c, el) {
+  window.uiState.selectedColor = c;
+  document.querySelectorAll('.color-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+window.openTxModal = function() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('txDate').value = today;
+  document.getElementById('txAmount').value = '';
+  document.getElementById('txDesc').value = '';
+  document.getElementById('txPayee').value = '';
+  const sel = document.getElementById('txCategory');
+  sel.innerHTML = window.liveData.categories.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  selectType('expense');
+  const rcb = document.getElementById('txRecurring');
+  if (rcb) rcb.checked = false;
+  // Member tag row — show only in family view
+  const memberRow = document.getElementById('txMemberRow');
+  if (window.uiState.isFamilyView) {
+    memberRow.style.display = '';
+    window.uiState.familySelectedMember = window.liveData.profiles[0]?.id || null;
+    renderMemberTags();
+  } else {
+    memberRow.style.display = 'none';
+  }
+  // populate pay method dropdown
+  const pid = window.uiState.isFamilyView
+    ? (window.uiState.familySelectedMember || window.liveData.profiles[0]?.id)
+    : window.uiState.activeProfile;
+  populatePayMethodDropdown('txPayMethod', pid);
+  // populate payee suggestions from past transactions
+  const dl = document.getElementById('payeeSuggestions');
+  if (dl) {
+    const seen = new Set();
+    window.liveData.transactions
+      .filter(t => t.payee && t.payee.trim())
+      .forEach(t => seen.add(t.payee.trim()));
+    dl.innerHTML = [...seen].sort().map(p => `<option value="${p}">`).join('');
+  }
+  // reset transfer type
+  window.uiState.transferType = 'family';
+  const ttFamily = document.getElementById('txTransferTypeFamily');
+  const ttSelf   = document.getElementById('txTransferTypeSelf');
+  if (ttFamily) { ttFamily.classList.add('active'); }
+  if (ttSelf)   { ttSelf.classList.remove('active'); }
+  document.getElementById('txModal').classList.add('open');
+};
+
+window.renderMemberTags = function() {
+  const wrap = document.getElementById('txMemberTags');
+  if (!wrap) return;
+  wrap.innerHTML = window.liveData.profiles.map(p => {
+    const sel = p.id === window.uiState.familySelectedMember;
+    const style = sel ? `border-color:${p.color};color:${p.color};background:${p.color}18;border-width:2px` : '';
+    return `<button class="member-tag ${sel?'selected':''}" style="${style}" onclick="selectFamilyMember('${p.id}',this)">
+      <span style="width:8px;height:8px;border-radius:50%;background:${p.color};display:inline-block;flex-shrink:0"></span>
+      ${p.name}
+    </button>`;
+  }).join('');
+};
+
+window.selectFamilyMember = function(id, el) {
+  window.uiState.familySelectedMember = id;
+  renderMemberTags();
+};
+
+window.openProfileModal = function() {
+  document.getElementById('profileName').value = '';
+  window.uiState.selectedColor = COLORS[0];
+  const cp = document.getElementById('colorPicker');
+  cp.innerHTML = COLORS.map((c,i)=>`<div class="color-opt ${i===0?'selected':''}" style="background:${c}" onclick="selectColor('${c}',this)"></div>`).join('');
+  document.getElementById('profileModal').classList.add('open');
+};
+
+// emoji → keywords for search
+const EMOJI_DATA = [
+  ['🍽️','food dining restaurant plate'],['🛒','grocery shopping cart store'],['🚌','bus transport commute travel'],
+  ['💡','electricity bill utilities light'],['🛍️','shopping bag retail store'],['🎬','movie entertainment cinema film'],
+  ['💊','medicine health pharmacy pill drug'],['💼','work salary job office briefcase'],['📦','box package other misc'],
+  ['🏠','home house rent mortgage'],['✈️','flight travel airplane vacation holiday'],['🎓','education school college tuition'],
+  ['🐶','pet dog animal'],['🏋️','gym fitness workout exercise health'],['☕','coffee cafe drink tea'],
+  ['🎮','gaming video games entertainment'],['🎵','music streaming spotify entertainment'],['📱','phone mobile subscription app'],
+  ['💇','salon haircut beauty grooming'],['🚗','car vehicle auto transport'],['⛽','fuel petrol gas station car'],
+  ['🏥','hospital doctor medical health clinic'],['💈','barber salon grooming'],['🌿','garden nature plant'],
+  ['🎁','gift present celebration'],['💰','cash money savings fund'],['🧾','receipt bill payment invoice'],
+  ['🏦','bank savings account finance'],['📚','books study learning education'],['👗','clothes fashion apparel clothing'],
+  ['🍕','pizza food delivery'],['🎪','entertainment event outing fun'],['🏊','swim pool sport recreation'],
+  ['🧹','cleaning household chores'],['🌐','internet subscription online'],['💳','credit card debit payment card bank'],
+  ['🏧','atm cash withdrawal bank'],['📊','investment stocks finance chart'],['🔑','rent key lease property'],
+  ['🚂','train metro rail commute transport'],['🚕','taxi cab uber ola transport'],['🏍️','bike motorcycle transport'],
+  ['🌊','swim beach vacation holiday'],['🧘','yoga meditation wellness health'],['🎯','hobby sport recreation'],
+  ['🍺','drinks bar alcohol restaurant'],['🍷','wine drinks dining restaurant'],['🧃','juice drinks grocery'],
+  ['🥗','salad health food diet'],['🍔','fast food burger restaurant dining'],['🍜','noodles food delivery restaurant'],
+  ['🧁','bakery dessert cafe food'],['🍦','ice cream dessert food'],['🎂','cake celebration birthday'],
+  ['🛵','scooter delivery transport'],['🚲','bicycle cycle transport fitness'],['🛺','auto rickshaw transport'],
+  ['🧺','laundry clothes household'],['🪣','household cleaning chores'],['🛁','bathroom household utilities'],
+  ['💻','laptop computer work tech'],['🖥️','desktop computer work office'],['🖨️','printer office work'],
+  ['📷','camera photo hobby'],['🎙️','podcast microphone recording'],['📺','tv streaming entertainment cable'],
+  ['🎧','headphones music streaming'],['⌚','watch accessories shopping'],['👟','shoes footwear shopping clothes'],
+  ['👜','bag purse accessories shopping'],['💍','jewelry accessories shopping'],['🕶️','sunglasses accessories'],
+  ['🧴','skincare beauty health'],['🧼','soap personal care hygiene'],['🪥','toothbrush personal care hygiene'],
+  ['🧻','toilet paper household grocery'],['🪴','plant home decor'],['🕯️','candle home decor'],
+  ['🖼️','art decoration home'],['🛋️','furniture home decor'],['🛏️','bedroom home furniture'],
+  ['🧰','tools maintenance repair home'],['🔧','repair maintenance service'],['⚡','electricity bill utilities'],
+  ['💧','water bill utilities'],['🔥','gas heating bill utilities'],['📡','cable internet utilities'],
+  ['🏋️','gym membership fitness health'],['🤸','sport recreation fitness'],['🎾','tennis sport recreation'],
+  ['⚽','football sport recreation'],['🏏','cricket sport recreation'],['🏸','badminton sport recreation'],
+  ['🎿','skiing vacation sport'],['🏕️','camping trip vacation travel'],['🚢','cruise vacation travel'],
+  ['🎠','amusement park family outing'],['🎡','fun fair family entertainment'],['🎭','theatre arts entertainment'],
+  ['🖊️','stationery office school'],['📌','supplies office work'],['📎','paperclip office work stationery'],
+  ['🗂️','filing documents office'],['📅','subscription calendar plan'],['🔔','subscription notification'],
+  ['🔐','security subscription service'],['☁️','cloud storage subscription tech'],['🧠','education learning subscription'],
+  ['🏪','grocery store supermarket'],['🏬','mall shopping retail'],['🏗️','construction home renovation'],
+  ['🪟','windows home renovation'],['🚪','door home renovation'],['🛠️','home repair maintenance'],
+  ['💈','salon grooming haircut beauty'],['💉','vaccine medical health'],['🩺','doctor checkup medical health'],
+  ['🦷','dentist dental health'],['👁️','eye doctor optician health'],['🩻','xray hospital medical health'],
+  ['🚑','ambulance emergency medical'],['💐','flowers gift occasion'],['🧧','gift red envelope celebration'],
+  ['🪙','coin cash savings money'],['💵','cash dollar money payment'],['📈','growth investment finance stock'],
+  ['📉','loss finance stock investment'],['🏆','achievement reward bonus income'],['🎰','lottery gambling chance'],
+];
+const EMOJI_LIST = EMOJI_DATA.map(d => d[0]);
+
+window.filterEmojis = function() {
+  const q = (document.getElementById('emojiSearch')?.value || '').toLowerCase().trim();
+  const currentIcon = document.getElementById('catIcon').value.trim();
+  const filtered = q
+    ? EMOJI_DATA.filter(([e, tags]) => tags.includes(q) || e === q)
+    : EMOJI_DATA;
+  const grid = document.getElementById('emojiGrid');
+  if (!grid) return;
+  if (filtered.length === 0) {
+    grid.innerHTML = '<span class="emoji-no-results">No results — try a different word</span>';
+    return;
+  }
+  grid.innerHTML = filtered.map(([e]) =>
+    `<button type="button" class="emoji-opt${currentIcon === e ? ' selected' : ''}" data-emoji="${e}" onclick="pickEmoji('${e}')">${e}</button>`
+  ).join('');
+};
+
+window.syncEmojiSelection = function() {
+  const val = document.getElementById('catIcon').value.trim();
+  document.querySelectorAll('.emoji-opt').forEach(e => {
+    e.classList.toggle('selected', e.dataset.emoji === val);
+  });
+};
+
+window.openCatModal = function(editId) {
+  const editing = editId ? window.liveData.categories.find(c => c.id === editId) : null;
+  const budgetProfileId = window.uiState.isFamilyView ? window.uiState.familySelectedMember : window.uiState.activeProfile;
+  document.getElementById('catModalTitle').textContent = editing ? 'Edit Category' : 'Add Category';
+  document.getElementById('catSaveBtn').textContent    = editing ? 'Save' : 'Add';
+  document.getElementById('catEditId').value           = editing ? editId : '';
+  document.getElementById('catName').value             = editing ? editing.name : '';
+  document.getElementById('catIcon').value             = editing ? editing.icon : '';
+  document.getElementById('catBudget').value           = editing ? (categoryBudgetForProfile(editing, budgetProfileId) || '') : '';
+  // Build emoji grid
+  // clear search and render full grid
+  const searchEl = document.getElementById('emojiSearch');
+  if (searchEl) searchEl.value = '';
+  filterEmojis();
+  document.getElementById('catModal').classList.add('open');
+  setTimeout(() => searchEl?.focus(), 100);
+};
+
+window.pickEmoji = function(e) {
+  document.getElementById('catIcon').value = e;
+  syncEmojiSelection();
+};
+
+window.confirmDeleteProfile = function(id, name, e) {
+  e.stopPropagation();
+  const txCount = window.liveData.transactions.filter(t => t.profileId === id).length;
+  document.getElementById('confirmTitle').textContent = `Delete "${name}"?`;
+  document.getElementById('confirmBody').textContent = `This will permanently delete this profile and all ${txCount} transaction${txCount!==1?'s':''}. This cannot be undone.`;
+  document.getElementById('confirmActionBtn').onclick = () => deleteProfile(id);
+  document.getElementById('confirmModal').classList.add('open');
+};
+
+window.openRenameModal = function(id, currentName, e) {
+  e.stopPropagation();
+  window.uiState.renamingProfileId = id;
+  document.getElementById('renameProfileInput').value = currentName;
+  document.getElementById('renameModal').classList.add('open');
+  setTimeout(() => document.getElementById('renameProfileInput').select(), 50);
+};
+
+window.renameProfile = async function() {
+  const name = document.getElementById('renameProfileInput').value.trim();
+  if (!name) { alert('Please enter a name.'); return; }
+  setSyncStatus('syncing', 'Saving…');
+  await setDoc(doc(db, 'profiles', window.uiState.renamingProfileId), { name }, { merge: true });
+  closeModal('renameModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.confirmClearTransactions = function() {
+  const txCount = profileTxs(window.uiState.activeProfile, window.uiState.currentMonth).length;
+  if (txCount === 0) return;
+  document.getElementById('confirmTitle').textContent = 'Clear all transactions?';
+  document.getElementById('confirmBody').textContent = `This will permanently delete all ${txCount} transaction${txCount!==1?'s':''} for this month. This cannot be undone.`;
+  document.getElementById('confirmActionBtn').onclick = () => clearMonthTransactions();
+  document.getElementById('confirmModal').classList.add('open');
+};
+
+// ─── Payment Methods helpers ─────────────────────────────────────────────────
+window.uiState.pmType = 'upi';
+
+function getProfilePayMethods(profileId) {
+  const p = window.liveData.profiles.find(p => p.id === profileId);
+  return p?.payMethods || [];
+}
+
+function populatePayMethodDropdown(elId, profileId) {
+  const sel = document.getElementById(elId);
+  if (!sel) return;
+  const methods = getProfilePayMethods(profileId);
+  const def = methods.find(m => m.isDefault);
+  sel.innerHTML = '<option value="">— Cash / Not specified —</option>' +
+    methods.map(m => `<option value="${m.id}" ${def && m.id === def.id ? 'selected' : ''}>${m.type === 'upi' ? '📲' : '🏦'} ${m.nickname} (${m.value})</option>`).join('');
+}
+
+window.selectPmType = function(t) {
+  window.uiState.pmType = t;
+  document.getElementById('pmTypeUpi').classList.toggle('active', t === 'upi');
+  document.getElementById('pmTypeBank').classList.toggle('active', t === 'bank');
+  document.getElementById('pmLabel').textContent = t === 'upi' ? 'UPI ID' : 'Account Number';
+  document.getElementById('pmValue').placeholder = t === 'upi' ? 'name@upi' : 'XXXX XXXX XXXX 1234';
+};
+
+window.openPayMethodModal = function(profileId) {
+  window.uiState.editingPayMethodProfileId = profileId;
+  document.getElementById('pmValue').value = '';
+  document.getElementById('pmNickname').value = '';
+  selectPmType('upi');
+  renderPayMethodList(profileId);
+  document.getElementById('payMethodModal').classList.add('open');
+};
+
+function renderPayMethodList(profileId) {
+  const methods = getProfilePayMethods(profileId);
+  const wrap = document.getElementById('payMethodList');
+  if (!methods.length) { wrap.innerHTML = '<p style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0">No payment methods yet</p>'; return; }
+  wrap.innerHTML = methods.map(m => `
+    <div class="pay-method-row">
+      <div class="pay-method-icon">${m.type === 'upi' ? '📲' : '🏦'}</div>
+      <div class="pay-method-info">
+        <div class="pay-method-name">${m.nickname}</div>
+        <div class="pay-method-sub">${m.value}</div>
+      </div>
+      ${m.isDefault ? '<span class="pay-method-default">Default</span>' : `<button class="btn btn-ghost" style="font-size:11px;padding:3px 8px" onclick="setDefaultPayMethod('${profileId}','${m.id}')">Set default</button>`}
+      <button class="tx-delete" style="opacity:1" onclick="deletePayMethod('${profileId}','${m.id}')"><i class="ti ti-trash"></i></button>
+    </div>`).join('');
+}
+
+window.addPayMethod = async function() {
+  const val      = document.getElementById('pmValue').value.trim();
+  const nickname = document.getElementById('pmNickname').value.trim() || val;
+  if (!val) { alert('Please enter a UPI ID or account number.'); return; }
+  const profileId = window.uiState.editingPayMethodProfileId;
+  const profile   = window.liveData.profiles.find(p => p.id === profileId);
+  const existing  = profile?.payMethods || [];
+  const newMethod = { id: genId(), type: window.uiState.pmType, value: val, nickname, isDefault: existing.length === 0 };
+  setSyncStatus('syncing', 'Saving…');
+  await setDoc(doc(db, 'profiles', profileId), { payMethods: [...existing, newMethod] }, { merge: true });
+  document.getElementById('pmValue').value = '';
+  document.getElementById('pmNickname').value = '';
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.deletePayMethod = async function(profileId, methodId) {
+  const profile  = window.liveData.profiles.find(p => p.id === profileId);
+  const updated  = (profile?.payMethods || []).filter(m => m.id !== methodId);
+  // if deleted was default, make first one default
+  if (updated.length && !updated.find(m => m.isDefault)) updated[0].isDefault = true;
+  setSyncStatus('syncing', 'Saving…');
+  await setDoc(doc(db, 'profiles', profileId), { payMethods: updated }, { merge: true });
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.setDefaultPayMethod = async function(profileId, methodId) {
+  const profile = window.liveData.profiles.find(p => p.id === profileId);
+  const updated = (profile?.payMethods || []).map(m => ({ ...m, isDefault: m.id === methodId }));
+  setSyncStatus('syncing', 'Saving…');
+  await setDoc(doc(db, 'profiles', profileId), { payMethods: updated }, { merge: true });
+  renderPayMethodList(profileId);
+  setSyncStatus('synced', 'Live sync on');
+};
+
+// ─── Edit Transaction + Audit Trail ──────────────────────────────────────────
+window.uiState.editTxType = 'expense';
+
+window.uiState.editTransferType = 'family';
+
+window.selectEditType = function(t) {
+  window.uiState.editTxType = t;
+  document.getElementById('editTypeIncome').classList.toggle('active',    t === 'income');
+  document.getElementById('editTypeExpense').classList.toggle('active',   t === 'expense');
+  document.getElementById('editTypeTransfer')?.classList.toggle('active', t === 'transfer');
+  updateTxTypeLabels(t, 'edit');
+  // show/hide transfer fields
+  const tf      = document.getElementById('editTransferFields');
+  const catRow  = document.getElementById('editTxCategory')?.closest('.form-row');
+  const payeeRow= document.getElementById('editTxPayee')?.closest('.form-row');
+  if (tf)      tf.classList.toggle('visible', t === 'transfer');
+  if (catRow)  catRow.style.display  = t === 'transfer' ? 'none' : '';
+  if (payeeRow)payeeRow.style.display= t === 'transfer' ? 'none' : '';
+  if (t === 'transfer') populateEditTransferDropdowns();
+};
+
+window.selectEditTransferType = function(tt) {
+  window.uiState.editTransferType = tt;
+  document.getElementById('editTransferTypeFamily')?.classList.toggle('active', tt === 'family');
+  document.getElementById('editTransferTypeSelf')?.classList.toggle('active',   tt === 'self');
+  populateEditTransferDropdowns();
+};
+
+function populateEditTransferDropdowns() {
+  const fromSel = document.getElementById('editTransferFrom');
+  const toSel   = document.getElementById('editTransferTo');
+  if (!fromSel || !toSel) return;
+  const txId    = document.getElementById('editTxId').value;
+  const tx      = window.liveData.transactions.find(t => t.id === txId);
+  const pid     = tx?.profileId;
+  const profiles= window.liveData.profiles;
+  if (window.uiState.editTransferType === 'family') {
+    const opts  = profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    fromSel.innerHTML = opts;
+    toSel.innerHTML   = opts;
+    // pre-select existing values if it was already a transfer
+    fromSel.value = tx?.transferFromId || pid || profiles[0]?.id;
+    const other   = profiles.find(p => p.id !== fromSel.value);
+    toSel.value   = tx?.transferToId || other?.id || '';
+  } else {
+    const methods = getProfilePayMethods(pid);
+    if (methods.length < 2) {
+      fromSel.innerHTML = '<option value="">Add accounts in My Profile first</option>';
+      toSel.innerHTML   = '<option value="">Add accounts in My Profile first</option>';
+      return;
+    }
+    const opts = methods.map(m => `<option value="${m.id}">${m.type==='upi'?'📲':'🏦'} ${m.nickname}</option>`).join('');
+    fromSel.innerHTML = opts;
+    toSel.innerHTML   = opts;
+    fromSel.value = tx?.transferFromId || methods[0].id;
+    toSel.value   = tx?.transferToId   || methods[1].id;
+    // sync From with Paid Via
+    const payMethodSel = document.getElementById('editTxPayMethod');
+    if (payMethodSel) payMethodSel.value = fromSel.value;
+    fromSel.onchange = () => { if (payMethodSel) payMethodSel.value = fromSel.value; };
+  }
+}
+
+window.openEditTxModal = function(id) {
+  const t = window.liveData.transactions.find(tx => tx.id === id);
+  if (!t) return;
+  const displayPayee = t.payee || (t.isAutoImport ? t.desc : '');
+  const displayDesc = (t.isAutoImport && displayPayee && !t.payee) ? (t.type === 'income' ? 'Auto imported credit' : 'Auto imported payment') : t.desc;
+  document.getElementById('editTxId').value       = id;
+  document.getElementById('editTxAmount').value   = t.amount;
+  document.getElementById('editTxDesc').value     = displayDesc;
+  document.getElementById('editTxPayee').value    = displayPayee;
+  document.getElementById('editTxDate').value     = t.date;
+  // pre-fill transfer type if applicable
+  if (t.type === 'transfer') {
+    window.uiState.editTransferType = t.transferKind || 'family';
+    const etf = document.getElementById('editTransferTypeFamily');
+    const ets = document.getElementById('editTransferTypeSelf');
+    if (etf) etf.classList.toggle('active', window.uiState.editTransferType === 'family');
+    if (ets) ets.classList.toggle('active', window.uiState.editTransferType === 'self');
+  }
+  selectEditType(t.type);
+  const catSel = document.getElementById('editTxCategory');
+  catSel.innerHTML = window.liveData.categories.map(c => `<option value="${c.id}" ${c.id === t.category ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
+  // payee suggestions in edit modal too
+  const editDl = document.getElementById('editPayeeSuggestions');
+  if (editDl) {
+    const seen = new Set();
+    window.liveData.transactions.filter(tx => tx.payee && tx.payee.trim()).forEach(tx => seen.add(tx.payee.trim()));
+    editDl.innerHTML = [...seen].sort().map(p => `<option value="${p}">`).join('');
+  }
+  populatePayMethodDropdown('editTxPayMethod', t.profileId);
+  // pre-select existing pay method
+  document.getElementById('editTxPayMethod').value = t.payMethod || '';
+  document.getElementById('editTxModal').classList.add('open');
+};
+
+window.updateTransaction = async function() {
+  const id      = document.getElementById('editTxId').value;
+  const amt     = parseFloat(document.getElementById('editTxAmount').value);
+  const desc    = document.getElementById('editTxDesc').value.trim();
+  const payee   = document.getElementById('editTxPayee').value.trim();
+  const date    = document.getElementById('editTxDate').value;
+  const cat     = document.getElementById('editTxCategory').value;
+  const payMethod = document.getElementById('editTxPayMethod').value || '';
+  if (!amt || !desc || !date) { alert('Please fill all fields.'); return; }
+  const old   = window.liveData.transactions.find(tx => tx.id === id);
+  const now   = new Date().toISOString();
+  const amendments = [...(old.amendments || [])];
+  // record what changed
+  const payMethodLabel = window.uiState.editTxType === 'income' ? 'Paid to' : 'Paid via';
+  const fields = [{k:'type',l:'Type'},{k:'amount',l:'Amount'},{k:'desc',l:'Description'},{k:'payee',l:'Paid to / From'},{k:'category',l:'Category'},{k:'date',l:'Date'},{k:'payMethod',l:payMethodLabel}];
+  fields.forEach(({k,l}) => {
+    const nv = k==='amount'?amt : k==='type'?window.uiState.editTxType : k==='category'?cat : k==='date'?date : k==='payMethod'?payMethod : k==='payee'?payee : desc;
+    if (String(old[k]||'') !== String(nv||'')) {
+      let oldLabel = old[k] || '—';
+      let newLabel = nv || '—';
+      if (k === 'category') {
+        oldLabel = window.liveData.categories.find(c=>c.id===old[k])?.name || old[k];
+        newLabel = window.liveData.categories.find(c=>c.id===cat)?.name || cat;
+      }
+      if (k === 'payMethod') {
+        const methods = getProfilePayMethods(old.profileId);
+        oldLabel = methods.find(m=>m.id===old[k])?.nickname || (old[k] ? old[k] : 'Cash');
+        newLabel = methods.find(m=>m.id===nv)?.nickname || (nv ? nv : 'Cash');
+      }
+      amendments.push({ field: l, from: String(oldLabel), to: String(newLabel), at: now });
+    }
+  });
+  setSyncStatus('syncing', 'Saving…');
+
+  if (window.uiState.editTxType === 'transfer') {
+    // Converting to / updating as transfer
+    const fromId       = document.getElementById('editTransferFrom')?.value || '';
+    const toId         = document.getElementById('editTransferTo')?.value   || '';
+    const transferKind = window.uiState.editTransferType || 'family';
+    if (!fromId || !toId) { alert('Please select From and To.'); return; }
+    if (fromId === toId)  { alert('From and To cannot be the same.'); return; }
+    const fromDisplayName = resolveTransferEndpoint(fromId, old.profileId);
+    const toDisplayName   = resolveTransferEndpoint(toId,   old.profileId);
+    const transferDesc    = desc || (fromDisplayName + ' → ' + toDisplayName);
+    const transferId      = old.transferId || genId();
+    const linkedId        = old.linkedTxId || '';
+    // Update this transaction
+    await setDoc(doc(db, 'transactions', id), {
+      type: 'transfer', transferRole: old.transferRole || 'sender',
+      amount: amt, desc: transferDesc, date, payMethod, amendments,
+      transferId, transferKind,
+      transferFromId: fromId, transferToId: toId,
+      transferFromName: fromDisplayName, transferToName: toDisplayName,
+      linkedTxId: linkedId,
+      // clear income/expense fields
+      payee: '', category: old.category || '',
+      isAutoImport: false
+    }, { merge: true });
+    // If there's a linked transaction, update it too
+    if (linkedId) {
+      await setDoc(doc(db, 'transactions', linkedId), {
+        type: 'transfer',
+        amount: amt, desc: transferDesc, date,
+        transferId, transferKind,
+        transferFromId: fromId, transferToId: toId,
+        transferFromName: fromDisplayName, transferToName: toDisplayName,
+        amendments
+      }, { merge: true });
+    } else {
+      // No linked tx yet — create the other side
+      const ref2 = doc(transactionsCol);
+      const receiverProfileId = window.liveData.profiles.find(p => p.id === toId)?.id || old.profileId;
+      await setDoc(ref2, {
+        profileId: receiverProfileId,
+        type: 'transfer', transferRole: 'receiver',
+        amount: amt, desc: transferDesc, payee: '', date, payMethod: '',
+        category: old.category || '',
+        transferId, transferKind,
+        transferFromId: fromId, transferToId: toId,
+        transferFromName: fromDisplayName, transferToName: toDisplayName,
+        linkedTxId: id,
+        amendments: [], createdAt: serverTimestamp()
+      });
+      // Update this tx with the new linkedTxId
+      await setDoc(doc(db, 'transactions', id), { linkedTxId: ref2.id }, { merge: true });
+    }
+  } else {
+    await setDoc(doc(db, 'transactions', id), {
+      type: window.uiState.editTxType, amount: amt, desc, payee, date, category: cat, payMethod,
+      amendments, isAutoImport: false
+    }, { merge: true });
+  }
+  closeModal('editTxModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+window.toggleAuditTrail = function(id) {
+  const el = document.getElementById('audit-' + id);
+  if (el) el.classList.toggle('open');
+};
+
+// ─── Carry Forward ────────────────────────────────────────────────────────────
+window.uiState.carryForwardChoice = 'net'; // 'net' | 'surplus' | 'all'
+window.uiState.carryForwardSign   = '+';   // '+' | '-'
+
+window.openCarryModal = function(fromMonth) {
+  const txs  = window.liveData.transactions.filter(t => t.date.startsWith(fromMonth));
+  const inc  = totalIncome(txs);
+  const exp  = totalExpense(txs);
+  const net  = inc - exp;
+  window.uiState.carryFromMonth = fromMonth;
+  window.uiState.carryNet       = net;
+  const sign = net >= 0 ? '+' : '-';
+  window.uiState.carryForwardSign = sign;
+  document.getElementById('carryModalBody').innerHTML = `
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px">
+      Carry balance from <strong>${monthLabel(fromMonth)}</strong> to <strong>${monthLabel(window.uiState.currentMonth)}</strong>
+    </p>
+    <div class="cf-option selected" id="cf-net" onclick="selectCarry('net',this)">
+      <div class="cf-option-icon">${net>=0?'📈':'📉'}</div>
+      <div class="cf-option-info">
+        <div class="cf-option-title">Net balance ${net>=0?'(Surplus)':'(Deficit)'}</div>
+        <div class="cf-option-sub">${sign}${fmt(Math.abs(net))} carried as ${net>=0?'income':'expense'}</div>
+      </div>
+    </div>
+    <div class="cf-option" id="cf-income" onclick="selectCarry('income',this)">
+      <div class="cf-option-icon">💰</div>
+      <div class="cf-option-info">
+        <div class="cf-option-title">Income only</div>
+        <div class="cf-option-sub">+${fmt(inc)} carried as income</div>
+      </div>
+    </div>
+    <div class="cf-option" id="cf-expense" onclick="selectCarry('expense',this)">
+      <div class="cf-option-icon">💸</div>
+      <div class="cf-option-info">
+        <div class="cf-option-title">Expenses only</div>
+        <div class="cf-option-sub">-${fmt(exp)} carried as expense</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:13px;color:var(--text2)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="carryRequired" style="width:16px;height:16px;accent-color:var(--accent)">
+        Mark as required (mandatory carry, shows reminder if skipped)
+      </label>
+    </div>`;
+  window.uiState.carryForwardChoice = 'net';
+  document.getElementById('carryConfirmBtn').onclick = executeCarryForward;
+  document.getElementById('carryModal').classList.add('open');
+};
+
+window.selectCarry = function(choice, el) {
+  window.uiState.carryForwardChoice = choice;
+  document.querySelectorAll('.cf-option').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+window.executeCarryForward = async function() {
+  const { carryFromMonth, carryNet, carryForwardChoice, currentMonth } = window.uiState;
+  const txs = window.liveData.transactions.filter(t => t.date.startsWith(carryFromMonth));
+  const inc  = totalIncome(txs);
+  const exp  = totalExpense(txs);
+  let amount, type, desc;
+  if (carryForwardChoice === 'net') {
+    amount = Math.abs(carryNet); type = carryNet >= 0 ? 'income' : 'expense';
+    desc = `Carry forward from ${monthLabel(carryFromMonth)}`;
+  } else if (carryForwardChoice === 'income') {
+    amount = inc; type = 'income';
+    desc = `Income carry forward from ${monthLabel(carryFromMonth)}`;
+  } else {
+    amount = exp; type = 'expense';
+    desc = `Expense carry forward from ${monthLabel(carryFromMonth)}`;
+  }
+  if (amount === 0) { alert('Nothing to carry forward.'); return; }
+  const profileId = window.uiState.isFamilyView
+    ? window.liveData.profiles[0]?.id
+    : window.uiState.activeProfile;
+  const date = currentMonth + '-01';
+  setSyncStatus('syncing', 'Saving…');
+  await addDoc(transactionsCol, {
+    profileId, type, amount, desc,
+    category: window.liveData.categories.find(c=>c.name==='Other')?.id || window.liveData.categories[0]?.id,
+    date, payMethod: '', amendments: [],
+    isCarryForward: true, createdAt: serverTimestamp()
+  });
+  // mark carry as done in settings
+  await setDoc(settingsDoc, { [`carried_${carryFromMonth}`]: true }, { merge: true });
+  closeModal('carryModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+// auto-prompt on 1st of new month
+function checkCarryForwardPrompt() {
+  const today   = new Date();
+  if (today.getDate() !== 1) return;
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0'); // current month
+  const prevM = String(today.getMonth()).padStart(2, '0') || '12';
+  const prevY = today.getMonth() === 0 ? y - 1 : y;
+  const prevMonth = `${prevY}-${prevM === '00' ? '12' : prevM}`;
+  const alreadyCarried = window.liveData.settings?.['carried_' + prevMonth];
+  if (!alreadyCarried) {
+    setTimeout(() => openCarryModal(prevMonth), 1200);
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function monthLabel(ym) {
+  const [y,m] = ym.split('-');
+  return new Date(y, m-1).toLocaleString('en-IN', {month:'long', year:'numeric'});
+}
+
+
+// Resolve a transfer endpoint ID to a display name
+function resolveTransferEndpoint(id, ownerProfileId) {
+  if (!id) return '?';
+  const prof = window.liveData.profiles.find(p => p.id === id);
+  if (prof) return prof.name;
+  const owner = window.liveData.profiles.find(p => p.id === ownerProfileId);
+  const m1 = (owner?.payMethods || []).find(m => m.id === id);
+  if (m1) return m1.nickname;
+  for (const p of window.liveData.profiles) {
+    const m2 = (p.payMethods || []).find(m => m.id === id);
+    if (m2) return m2.nickname;
+  }
+  return id || '?';
+}
+
+function transferDisplayNames(t) {
+  const fromName = resolveTransferEndpoint(t.transferFromId, t.profileId);
+  const toName   = resolveTransferEndpoint(t.transferToId,   t.profileId);
+  return {
+    from: fromName !== '?' ? fromName : (t.transferFromName || '?'),
+    to:   toName   !== '?' ? toName   : (t.transferToName   || '?'),
+  };
+}
+
+function txRow(t) {
+  const d = new Date(t.date+'T00:00:00');
+  const dateStr = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  const amendments = t.amendments || [];
+  const auditBtn   = amendments.length ? `<button class="tx-expand-btn" onclick="toggleAuditTrail('${t.id}')" title="History"><i class="ti ti-history"></i></button>` : '';
+  const auditTrail = amendments.length ? `
+    <div class="audit-trail" id="audit-${t.id}">
+      ${amendments.map(a=>`<div class="audit-entry"><span class="audit-badge">${a.field}</span> ${a.from} \u2192 ${a.to} <span style="color:var(--text3);font-size:10px">${new Date(a.at).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}
+    </div>` : '';
+
+  // ── TRANSFER ──────────────────────────────────────────────────────────────
+  if (t.type === 'transfer') {
+    const isSelf   = t.transferKind === 'self';
+    const { from: fromName, to: toName } = transferDisplayNames(t);
+    const kindLabel = isSelf ? '\uD83D\uDD04 Self Transfer' : '\u21D4 Family Transfer';
+    const safeDesc  = (t.desc || kindLabel).replace(/'/g, "\\'");
+    const linkedId  = t.linkedTxId || '';
+    return `<div class="tx-item-wrap" style="background:var(--transfer-bg)">
+      <div class="tx-item">
+        <div class="tx-icon transfer">${isSelf ? '\uD83D\uDD04' : '\u21D4'}</div>
+        <div class="tx-info">
+          <div class="tx-name">${t.desc || kindLabel} <span class="transfer-badge">${kindLabel}</span></div>
+          <div class="tx-meta">${fromName} \u2192 ${toName} \u00B7 ${dateStr}</div>
+        </div>
+        <div class="tx-amount-wrap">
+          <div class="tx-actions">
+            ${auditBtn}
+            <button class="tx-delete" onclick="deleteTransfer('${t.id}','${linkedId}','${safeDesc}');" title="Delete both sides"><i class="ti ti-trash"></i></button>
+          </div>
+          <div style="min-width:80px;text-align:right;font-size:15px;font-weight:600;color:var(--text2)">${fmt(t.amount)}</div>
+        </div>
+      </div>
+      ${auditTrail}
+    </div>`;
+  }
+
+  // ── INCOME / EXPENSE ──────────────────────────────────────────────────────
+  const cat = window.liveData.categories.find(c=>c.id===t.category)||{name:'Other',icon:'\uD83D\uDCE6'};
+  const displayPayee = t.payee || (t.isAutoImport ? t.desc : '');
+  const displayDesc  = (t.isAutoImport && displayPayee && !t.payee)
+    ? (t.type === 'income' ? 'Auto imported credit' : 'Auto imported payment') : t.desc;
+  const txProfile = window.liveData.profiles.find(p => p.id === t.profileId);
+  const method    = t.payMethod && txProfile ? (txProfile.payMethods || []).find(m => m.id === t.payMethod) : null;
+  const payBadge  = method ? `<span class="pay-badge">${method.type==='upi'?'\uD83D\uDCF2':'\uD83C\uDFE6'} ${method.nickname}</span>` : '';
+  return `<div class="tx-item-wrap">
+  <div class="tx-item">
+    <div class="tx-icon ${t.type}">${cat.icon}</div>
+    <div class="tx-info">
+      <div class="tx-name">${displayDesc}</div>
+      ${displayPayee ? `<div class="tx-meta">${t.type==='income'?'From':'Paid to'} ${displayPayee}</div>` : ''}
+      <div class="tx-meta">${cat.name} \u00B7 ${dateStr} ${payBadge}</div>
+    </div>
+    <div class="tx-amount-wrap">
+      <div class="tx-actions">
+        ${auditBtn}
+        <button class="tx-edit-btn" onclick="openEditTxModal('${t.id}')" title="Edit"><i class="ti ti-pencil"></i></button>
+        <button class="tx-delete" onclick="deleteTx('${t.id}','${t.desc.replace(/'/g,"\\'")}');" title="Delete"><i class="ti ti-trash"></i></button>
+      </div>
+      <div class="tx-amount ${t.type}" style="min-width:80px;text-align:right">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div>
+    </div>
+  </div>
+  ${auditTrail}
+  </div>`;
+}
+
+function renderSidebar() {
+  const list = document.getElementById('profileList');
+  const canDelete = window.liveData.profiles.length > 1;
+  // highlight family btn
+  const fb = document.getElementById('familyProfileBtn');
+  if (fb) fb.classList.toggle('active', !!window.uiState.isFamilyView);
+  list.innerHTML = window.liveData.profiles.map(p => `
+    <div class="profile-row">
+      <button class="profile-btn ${!window.uiState.isFamilyView && p.id===window.uiState.activeProfile?'active':''}" onclick="switchProfile('${p.id}')">
+        <div class="profile-avatar" style="background:${p.color}20;color:${p.color}">${p.photoUrl ? `<img src="${p.photoUrl}" alt="${p.name}">` : getInitials(p.name)}</div>
+        <span>${p.name}</span>
+      </button>
+      <button class="profile-del-btn" onclick="openRenameModal('${p.id}','${p.name.replace(/'/g,"\\'")}',event)" title="Rename"><i class="ti ti-pencil"></i></button>
+      ${canDelete ? `<button class="profile-del-btn danger" onclick="confirmDeleteProfile('${p.id}','${p.name.replace(/'/g,"\\'")}',event)" title="Delete"><i class="ti ti-trash"></i></button>` : ''}
+    </div>`).join('');
+}
+
+function dashboardInsight(txs, inc, exp, net, sortedCats) {
+  if (!txs.length) return 'No transactions yet for this month. Add one to start seeing insights.';
+  const txCount = txs.length;
+  const top = sortedCats[0];
+  if (net < 0) return `You are in deficit by ${fmt(Math.abs(net))} this month. Expenses are higher than income across ${txCount} transaction${txCount !== 1 ? 's' : ''}.`;
+  if (exp === 0 && inc > 0) return `Clean month so far: ${fmt(inc)} income recorded and no expenses yet.`;
+  if (top) {
+    const cat = window.liveData.categories.find(c => c.id === top[0]) || { name: 'Other' };
+    const pct = exp ? Math.round((top[1] / exp) * 100) : 0;
+    return `${cat.name} is your biggest spend at ${fmt(top[1])}, about ${pct}% of this month's expenses.`;
+  }
+  if (net > 0) return `You are running a surplus of ${fmt(net)} this month.`;
+  return `Income and expenses are balanced so far this month.`;
+}
+
+function renderDashboard() {
+  const txs = profileTxs(window.uiState.activeProfile, window.uiState.currentMonth);
+  const inc = totalIncome(txs);
+  const exp = totalExpense(txs);
+  const net = inc - exp;
+  // transfers for display (sender side only to avoid duplication)
+  const myTransfers = txs.filter(t => t.type==='transfer' && t.transferRole==='sender');
+  const profile = window.liveData.profiles.find(p=>p.id===window.uiState.activeProfile) || { name:'—', color:'#aaa' };
+
+  const catExp = {};
+  txs.filter(t=>t.type==='expense').forEach(t => { catExp[t.category] = (catExp[t.category]||0) + t.amount; });
+  const sortedCats = Object.entries(catExp).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxCat = sortedCats[0]?.[1] || 1;
+  const recent = [...txs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="topbar">
+      <div class="page-title">
+        Dashboard
+        <span style="color:${profile.color}">${profile.name}'s finances</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="month-nav">
+          <button onclick="shiftMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span>${monthLabel(window.uiState.currentMonth)}</span>
+          <button onclick="shiftMonth(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <button class="btn btn-primary" onclick="openTxModal()">+ Add Transaction</button>
+      </div>
+    </div>
+    <div id="insightStrip" style="margin:14px 32px 0;padding:10px 16px;background:var(--accent-light);border-radius:var(--radius-sm);font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px">
+    <span style="font-size:16px">💡</span><span id="insightText">${dashboardInsight(txs, inc, exp, net, sortedCats)}</span>
+  </div>
+  <div class="stats-grid">
+      <div class="stat-card income-card">
+        <div class="stat-label">Total Income</div>
+        <div class="stat-value">${fmt(inc)}</div>
+        <div class="stat-sub">${txs.filter(t=>t.type==='income').length} transaction(s)</div>
+      </div>
+      <div class="stat-card expense-card">
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value">${fmt(exp)}</div>
+        <div class="stat-sub">${txs.filter(t=>t.type==='expense').length} transaction(s)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Net Balance</div>
+        <div class="stat-value ${net>=0?'positive':'negative'}">${fmt(Math.abs(net))}</div>
+        <div class="stat-sub" style="color:${net>=0?'var(--income)':'var(--expense)'}">${net>=0?'Surplus':'Deficit'}</div>
+      </div>
+    </div>
+    <div class="content">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent Transactions</span>
+            <button class="btn btn-ghost" style="font-size:13px;padding:6px 12px" onclick="switchNav('transactions', document.querySelectorAll('.nav-btn')[1])">View all</button>
+          </div>
+          <div class="card-body">
+            ${recent.length===0
+              ? `<div class="empty"><i class="ti ti-inbox"></i><p>No transactions this month.<br>Add your first one!</p></div>`
+              : recent.map(t=>txRow(t)).join('')}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Income vs Expenses</span></div>
+          <div class="chart-wrap">
+            <div style="position:relative;height:180px"><canvas id="donutChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Top spending</span></div>
+          <div class="category-list">
+            ${sortedCats.length===0
+              ? `<p style="font-size:13px;color:var(--text3)">No expense data yet.</p>`
+                : sortedCats.map(([cid,amt])=>{
+                  const cat = window.liveData.categories.find(c=>c.id===cid)||{name:'Other',icon:'📦'};
+                  const catBudget = categoryBudgetForProfile(cat, window.uiState.activeProfile);
+                  const overBudget = catBudget && amt > catBudget;
+                  return `<div class="cat-row" style="cursor:pointer" title="View all ${cat.name} transactions" onclick="viewByCategory('${cat.id}')">
+                    <span class="cat-label">${cat.icon} ${cat.name}${overBudget ? ' <span style="font-size:10px;color:var(--expense)">⚠</span>' : ''}</span>
+                    <div class="cat-bar-wrap"><div class="cat-bar" style="width:${Math.round(amt/maxCat*100)}%;background:${overBudget?'var(--expense)':amt/maxCat>0.8?'#E8A838':'var(--accent)'}"></div></div>
+                    <span class="cat-amount" style="color:${overBudget?'var(--expense)':'inherit'}">${fmt(amt)} <i class="ti ti-chevron-right" style="font-size:10px;opacity:0.5"></i></span>
+                  </div>`;
+                }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  if (inc > 0 || exp > 0) {
+    new Chart(document.getElementById('donutChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Income','Expenses'],
+        datasets: [{ data:[inc,exp], backgroundColor:['#1D6B4A','#B03A2E'], borderWidth:0, hoverOffset:4 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, cutout:'70%',
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>' '+fmt(ctx.raw) } } }
+      }
+    });
+  }
+}
+
+function renderTransactions() {
+  const profile = window.liveData.profiles.find(p=>p.id===window.uiState.activeProfile) || {name:'—',color:'#aaa'};
+  let txs = profileTxs(window.uiState.activeProfile, window.uiState.currentMonth);
+  txs = applyFiltersAndSort(txs);
+  document.getElementById('mainContent').innerHTML = `
+    <div class="topbar">
+      <div class="page-title">Transactions <span style="color:${profile.color}">${profile.name}</span></div>
+      <div class="topbar-actions">
+        <div class="month-nav">
+          <button onclick="shiftMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span>${monthLabel(window.uiState.currentMonth)}</span>
+          <button onclick="shiftMonth(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <button class="btn btn-ghost bulk-del-btn" onclick="confirmClearTransactions()"><i class="ti ti-trash" style="font-size:14px;vertical-align:-2px"></i> Clear month</button>
+        <button class="btn btn-primary" onclick="openTxModal()">+ Add Transaction</button>
+      </div>
+    </div>
+    <div style="padding:16px 32px 32px">
+      <div class="card">
+        ${filterPanelHTML()}
+        <div class="card-body">${renderGrouped(txs, txRow)}</div>
+      </div>
+    </div>`;
+}
+
+function categoryRow(c, txs, budgetProfileId) {
+  const amendments = c.amendments || [];
+  const auditBtn = amendments.length ? `<button class="tx-expand-btn" onclick="toggleAuditTrail('cat-${c.id}')" title="History"><i class="ti ti-history"></i></button>` : '';
+  const auditTrail = amendments.length ? `
+    <div class="audit-trail" id="audit-cat-${c.id}">
+      ${amendments.map(a=>`<div class="audit-entry"><span class="audit-badge">${a.field}</span> ${a.from} → ${a.to} <span style="color:var(--text3);font-size:10px">${new Date(a.at).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}
+    </div>` : '';
+  const spent = (txs || [])
+    .filter(t => t.type === 'expense' && t.category === c.id)
+    .reduce((sum, t) => sum + t.amount, 0);
+  const budget = categoryBudgetForProfile(c, budgetProfileId);
+  const left = budget - spent;
+  const hasBudget = budget > 0;
+  const pct = hasBudget ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
+  const overBudget = hasBudget && left < 0;
+  const budgetLine = hasBudget
+    ? `<div class="cat-budget-line">
+        <span class="cat-budget-pill">Spent ${fmt(spent)}</span>
+        <span class="cat-budget-pill">Budget ${fmt(budget)}</span>
+        <span class="cat-budget-pill" style="color:${overBudget?'var(--expense)':'var(--income)'}">${overBudget ? 'Over by ' + fmt(Math.abs(left)) : 'Left ' + fmt(left)}</span>
+      </div>
+      <div class="cat-budget-progress"><span style="width:${pct}%;background:${overBudget?'var(--expense)':'var(--income)'}"></span></div>`
+    : `<div class="cat-budget-line">
+        <span class="cat-budget-pill">Spent ${fmt(spent)}</span>
+        <span class="cat-budget-pill">No budget set</span>
+      </div>`;
+  return `<div class="tx-item-wrap">
+    <div class="tx-item">
+      <div class="tx-icon expense" style="font-size:20px">${c.icon}</div>
+      <div class="tx-info">
+        <div class="tx-name">${c.name}</div>
+        ${budgetLine}
+      </div>
+      <div class="tx-actions">
+        ${auditBtn}
+        <button class="tx-edit-btn" onclick="openCatModal('${c.id}')" title="Edit"><i class="ti ti-pencil"></i></button>
+        ${window.liveData.categories.length>1
+          ? `<button class="tx-delete" onclick="confirmDeleteCat('${c.id}','${c.name.replace(/'/g,"\'")}')"><i class="ti ti-trash"></i></button>`
+          : ''}
+      </div>
+    </div>
+    ${auditTrail}
+  </div>`;
+}
+
+function renderCategoriesPage() {
+  const budgetProfileId = window.uiState.isFamilyView ? window.uiState.familySelectedMember : window.uiState.activeProfile;
+  const budgetProfile = window.liveData.profiles.find(p => p.id === budgetProfileId);
+  const txs = budgetProfileId ? profileTxs(budgetProfileId, window.uiState.currentMonth) : [];
+  document.getElementById('mainContent').innerHTML = `
+    <div class="topbar">
+      <div class="page-title">Categories${budgetProfile ? ` <span style="color:${budgetProfile.color}">${budgetProfile.name}</span>` : ''}</div>
+      <div class="topbar-actions">
+        <div class="month-nav">
+          <button onclick="shiftMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span>${monthLabel(window.uiState.currentMonth)}</span>
+          <button onclick="shiftMonth(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <button class="btn btn-primary" onclick="openCatModal()">+ Add Category</button>
+      </div>
+    </div>
+    <div style="padding:24px 32px">
+      ${budgetProfileId ? '' : `<div class="insight-banner" style="margin-bottom:16px"><span>💡</span><span>Budgets are profile-specific. Select a member profile to see spent, budget, and left amounts.</span></div>`}
+      <div class="card">
+        <div class="card-body">
+          ${window.liveData.categories.map(c=>categoryRow(c, txs, budgetProfileId)).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function familyTxRow(t) {
+  if (t.type === 'transfer') return txRow(t); // reuse same transfer rendering
+  const cat    = window.liveData.categories.find(c=>c.id===t.category)||{name:'Other',icon:'📦'};
+  const member = window.liveData.profiles.find(p=>p.id===t.profileId);
+  const d = new Date(t.date+'T00:00:00');
+  const dateStr = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  const displayPayee = t.payee || (t.isAutoImport ? t.desc : '');
+  const displayDesc = (t.isAutoImport && displayPayee && !t.payee) ? (t.type === 'income' ? 'Auto imported credit' : 'Auto imported payment') : t.desc;
+  const amendments = t.amendments || [];
+  let payBadge = '';
+  if (t.payMethod && member) {
+    const method = (member.payMethods||[]).find(m=>m.id===t.payMethod);
+    if (method) payBadge = `<span class="pay-badge">${method.type==='upi'?'📲':'🏦'} ${method.nickname}</span>`;
+  }
+  const auditBtn   = amendments.length ? `<button class="tx-expand-btn" onclick="toggleAuditTrail('${t.id}')" title="History"><i class="ti ti-history"></i></button>` : '';
+  const auditTrail = amendments.length ? `
+    <div class="audit-trail" id="audit-${t.id}">
+      ${amendments.map(a=>`<div class="audit-entry"><span class="audit-badge">${a.field}</span> ${a.from} → ${a.to} <span style="color:var(--text3);font-size:10px">${new Date(a.at).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}
+    </div>` : '';
+  return `<div class="tx-item-wrap">
+    <div class="tx-item">
+      <div class="tx-icon ${t.type}">${cat.icon}</div>
+      <div class="tx-info">
+        <div class="tx-name">${displayDesc}${member?` <span class="tx-member-badge" style="background:${member.color}18;color:${member.color}">${member.name}</span>`:''}
+        </div>
+        ${displayPayee ? `<div class="tx-meta">${t.type === 'income' ? 'From' : 'Paid to'} ${displayPayee}</div>` : ''}
+        <div class="tx-meta">${cat.name} · ${dateStr} ${payBadge}</div>
+      </div>
+      <div class="tx-amount-wrap">
+        <div class="tx-actions">
+          ${auditBtn}
+          <button class="tx-edit-btn" onclick="openEditTxModal('${t.id}')" title="Edit"><i class="ti ti-pencil"></i></button>
+          <button class="tx-delete" onclick="deleteTx('${t.id}','${t.desc.replace(/'/g,"\'")}');" title="Delete"><i class="ti ti-trash"></i></button>
+        </div>
+        <div class="tx-amount ${t.type}" style="min-width:80px;text-align:right">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div>
+      </div>
+    </div>
+    ${auditTrail}
+  </div>`;
+}
+
+function renderFamilyView() {
+  const sub = window.uiState.familySubView || 'dashboard';
+  if (sub === 'transactions') { renderFamilyTransactions(); return; }
+  if (sub === 'categories')   { renderCategoriesPage(); return; }
+  renderFamilyDashboard();
+}
+
+function renderFamilyDashboard() {
+  const month = window.uiState.currentMonth;
+  const allTxs = window.liveData.transactions.filter(t => t.date.startsWith(month));
+  const famInc = totalIncome(allTxs);
+  const famExp = totalExpense(allTxs);
+  const famNet = famInc - famExp;
+  // Only show sender-side of transfers (avoid double counting)
+  const famTransfers = allTxs.filter(t => t.type==='transfer' && t.transferRole==='sender');
+  function resolveTransferName(tx, isFrom) {
+    const id = isFrom ? tx.transferFromId : tx.transferToId;
+    // Try profile first
+    const prof = window.liveData.profiles.find(p => p.id === id);
+    if (prof) return prof.name;
+    // Try payment method on the sender's profile
+    const senderProf = window.liveData.profiles.find(p => p.id === tx.profileId);
+    const method = (senderProf?.payMethods || []).find(m => m.id === id);
+    if (method) return method.nickname;
+    return '?';
+  }
+  const famTransferTotal = famTransfers.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+  // per-member breakdown
+  const memberRows = window.liveData.profiles.map(p => {
+    const ptxs = allTxs.filter(t => t.profileId === p.id);
+    const inc = totalIncome(ptxs);
+    const exp = totalExpense(ptxs);
+    const net = inc - exp;
+    return { p, inc, exp, net, count: ptxs.length };
+  });
+
+  // all family transactions merged, with member badge
+  let mergedTxs = [...allTxs].sort((a,b) => b.date.localeCompare(a.date));
+
+  // category spending breakdown (family-wide)
+  const famCatExp = {};
+  allTxs.filter(t=>t.type==='expense').forEach(t => { famCatExp[t.category] = (famCatExp[t.category]||0) + t.amount; });
+  const famSortedCats = Object.entries(famCatExp).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const famMaxCat = famSortedCats[0]?.[1] || 1;
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="topbar" style="margin-bottom:20px">
+      <div class="page-title">Family <span>combined view</span></div>
+      <div class="topbar-actions">
+        <div class="month-nav">
+          <button onclick="shiftMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span>${monthLabel(month)}</span>
+          <button onclick="shiftMonth(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <button class="btn btn-primary" onclick="openTxModal()">+ Add Transaction</button>
+      </div>
+    </div>
+
+    <div style="padding:0 32px 32px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- Hero card -->
+      <div class="family-hero">
+        <div class="family-hero-label">Family net balance</div>
+        <div class="family-hero-amount">${fmt(Math.abs(famNet))}</div>
+        <div class="family-hero-sub">${famNet >= 0 ? '✦ Surplus' : '▼ Deficit'} this month</div>
+        <div class="family-stats">
+          <div class="family-stat">
+            <div class="family-stat-label">Total Income</div>
+            <div class="family-stat-value pos">${fmt(famInc)}</div>
+          </div>
+          <div class="family-stat">
+            <div class="family-stat-label">Total Expenses</div>
+            <div class="family-stat-value neg">${fmt(famExp)}</div>
+          </div>
+          ${famTransfers.length ? `
+          <div class="family-stat family-transfer-stat">
+            <div class="family-transfer-head">
+              <div class="family-stat-label" style="margin-bottom:0">Internal Transfers (${famTransfers.length})</div>
+              <div class="family-transfer-total">${fmt(famTransferTotal)}</div>
+            </div>
+            <div class="family-transfer-list">${famTransfers.slice(0, 4).map(t=>{
+              const owner = window.liveData.profiles.find(p=>p.id===t.profileId);
+              const fromName = t.transferKind === 'self' ? (owner?.name || '?') : resolveTransferName(t, true);
+              const toName = t.transferKind === 'self' ? (owner?.name || '?') : resolveTransferName(t, false);
+              return `<span class="family-transfer-pill">${fromName} → ${toName} <strong>${fmt(t.amount)}</strong></span>`;
+            }).join('')}${famTransfers.length > 4 ? `<span class="family-transfer-pill">+${famTransfers.length - 4} more</span>` : ''}</div>
+          </div>` : ''}
+        </div>
+      </div>
+
+      <!-- Member breakdown -->
+      <div>
+        <div class="family-section-header">Members</div>
+        <div class="member-cards">
+          ${memberRows.map(({p, inc, exp, net, count}) => `
+            <div class="member-card">
+              <div style="flex:1;display:flex;align-items:center;gap:14px;cursor:pointer" onclick="switchProfile('${p.id}')">
+              <div class="member-card-avatar" style="background:${p.color}20;color:${p.color}">${getInitials(p.name)}</div>
+              <div class="member-card-info">
+                <div class="member-card-name">${p.name}</div>
+                <div class="member-card-sub">${count} transaction${count!==1?'s':''} · Inc ${fmt(inc)} · Exp ${fmt(exp)}</div>
+              </div>
+              <div class="member-card-stats">
+                  <div class="member-card-net ${net>=0?'pos':'neg'}">${net>=0?'+':''}${fmt(net)}</div>
+                  <div class="member-card-meta">${net>=0?'surplus':'deficit'}</div>
+                </div>
+              </div>
+              <button class="btn btn-ghost" style="font-size:11px;padding:4px 9px;flex-shrink:0" onclick="openPayMethodModal('${p.id}')">💳 Pay</button>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Recent txns + Charts side by side -->
+      <div class="content" style="padding:0">
+
+        <!-- Left: recent transactions -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Recent transactions</span>
+              <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px" onclick="resetTransactionFilters();window.uiState.familySubView='transactions';document.querySelectorAll('.nav-btn').forEach((b,i)=>{b.classList.toggle('active',i===1)});render()">View all</button>
+            </div>
+            <div class="card-body">
+              ${mergedTxs.length === 0
+                ? `<div class="empty"><i class="ti ti-inbox"></i><p>No transactions this month.</p></div>`
+                : mergedTxs.slice(0, 8).map(t => familyTxRow(t)).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: donut + top spending -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Income vs Expenses</span></div>
+            <div class="chart-wrap">
+              <div style="position:relative;height:180px"><canvas id="famDonutChart"></canvas></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Top spending</span></div>
+            <div class="category-list">
+              ${famSortedCats.length === 0
+                ? `<p style="font-size:13px;color:var(--text3);padding:8px 0">No expense data yet.</p>`
+                : famSortedCats.map(([cid, amt]) => {
+                    const cat = window.liveData.categories.find(c => c.id === cid) || {name:'Other', icon:'📦'};
+                    return `<div class="cat-row" style="cursor:pointer" title="View ${cat.name} transactions" onclick="viewByCategory('${cat.id}')">
+                      <span class="cat-label">${cat.icon} ${cat.name}</span>
+                      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${Math.round(amt / famMaxCat * 100)}%"></div></div>
+                      <span class="cat-amount">${fmt(amt)} <i class="ti ti-chevron-right" style="font-size:10px;opacity:0.5"></i></span>
+                    </div>`;
+                  }).join('')}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('famDonutChart');
+    if (canvas && (famInc > 0 || famExp > 0)) {
+      new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Income', 'Expenses'],
+          datasets: [{ data: [famInc, famExp], backgroundColor: ['#1D6B4A', '#B03A2E'], borderWidth: 0, hoverOffset: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '70%',
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } }
+        }
+      });
+    }
+  });
+}
+
+function renderFamilyTransactions() {
+  const month = window.uiState.currentMonth;
+  let txs = window.liveData.transactions.filter(t => t.date.startsWith(month));
+  txs = applyFiltersAndSort(txs);
+  document.getElementById('mainContent').innerHTML = `
+    <div class="topbar">
+      <div class="page-title">Transactions <span>Family</span></div>
+      <div class="topbar-actions">
+        <div class="month-nav">
+          <button onclick="shiftMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span>${monthLabel(month)}</span>
+          <button onclick="shiftMonth(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <button class="btn btn-primary" onclick="openTxModal()">+ Add Transaction</button>
+      </div>
+    </div>
+    <div style="padding:16px 32px 32px">
+      <div class="card">
+        ${filterPanelHTML()}
+        <div class="card-body">${renderGrouped(txs, familyTxRow)}</div>
+      </div>
+    </div>`;
+}
+
+function renderProfilePage() {
+  const pid  = window.uiState.activeProfile;
+  const profile = window.liveData.profiles.find(p => p.id === pid);
+  if (!profile) {
+    document.getElementById('mainContent').innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3)">Select a profile first</div>`;
+    return;
+  }
+  const month = window.uiState.currentMonth;
+  const txs   = profileTxs(pid, month);
+  const allTxs= window.liveData.transactions.filter(t => t.profileId === pid);
+  const inc   = totalIncome(txs);
+  const exp   = totalExpense(txs);
+  const net   = inc - exp;
+  const allInc= totalIncome(allTxs);
+  const allExp= totalExpense(allTxs);
+  const approxIncome = profile.approxIncome ? fmt(profile.approxIncome) : '—';
+  const occupation   = profile.occupation || '—';
+  const phone        = profile.phone || '—';
+  const email        = profile.email || '—';
+  const salaryAc     = profile.salaryAccount || '—';
+  const savingsAc    = profile.savingsAccount || '—';
+  const upiIds       = (profile.payMethods||[]).filter(m=>m.type==='upi');
+  const bankAcs      = (profile.payMethods||[]).filter(m=>m.type==='bank');
+  const savingsGoal  = profile.savingsGoal ? fmt(profile.savingsGoal) : null;
+  const savingsPct   = profile.savingsGoal ? Math.min(100, Math.round((net/profile.savingsGoal)*100)) : null;
+  // photo or initials
+  const photoHTML = profile.photoUrl
+    ? `<img src="${profile.photoUrl}" class="profile-photo" style="background:${profile.color}20">`
+    : `<div class="profile-photo" style="background:${profile.color}20;color:${profile.color}">${getInitials(profile.name)}</div>`;
+
+  document.getElementById('mainContent').innerHTML = `
+  <div class="topbar">
+    <div class="page-title">${profile.name}<span>Profile & Settings</span></div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary" onclick="openEditProfileModal('${pid}')">✏️ Edit Profile</button>
+    </div>
+  </div>
+  <div class="profile-page-wrap">
+
+    <!-- Hero -->
+    <div class="profile-hero-card">
+      <div class="profile-photo-wrap">
+        ${photoHTML}
+        <button class="profile-photo-edit" onclick="triggerPhotoUpload('${pid}')" title="Change photo">✏️</button>
+        <input type="file" id="photoUpload" accept="image/*" style="display:none" onchange="handlePhotoUpload('${pid}',this)">
+      </div>
+      <div style="flex:1">
+        <div style="font-family:'Instrument Serif',serif;font-size:26px;margin-bottom:4px">${profile.name}</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:16px">${occupation !== '—' ? occupation : 'No occupation set'}</div>
+        <div class="profile-details-grid">
+          <div class="profile-detail-item">
+            <div class="profile-detail-label">Monthly Income</div>
+            <div class="profile-detail-value">${approxIncome}</div>
+          </div>
+          <div class="profile-detail-item">
+            <div class="profile-detail-label">Phone</div>
+            <div class="profile-detail-value ${phone==='—'?'muted':''}">${phone}</div>
+          </div>
+          <div class="profile-detail-item">
+            <div class="profile-detail-label">Email</div>
+            <div class="profile-detail-value ${email==='—'?'muted':''}" style="font-size:12px;word-break:break-all">${email}</div>
+          </div>
+          <div class="profile-detail-item">
+            <div class="profile-detail-label">Savings Goal</div>
+            <div class="profile-detail-value">${savingsGoal || '—'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- This month stats -->
+    <div class="profile-section-card">
+      <div class="profile-section-title">
+        ${monthLabel(month)}
+        <div class="month-nav" style="margin:0">
+          <button onclick="shiftMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+          <button onclick="shiftMonth(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+      </div>
+      <div class="profile-section-body">
+        <div class="profile-stat-row">
+          <div class="profile-stat-box">
+            <div class="profile-stat-box-label">Income</div>
+            <div class="profile-stat-box-value" style="color:var(--income)">${fmt(inc)}</div>
+          </div>
+          <div class="profile-stat-box">
+            <div class="profile-stat-box-label">Expenses</div>
+            <div class="profile-stat-box-value" style="color:var(--expense)">${fmt(exp)}</div>
+          </div>
+          <div class="profile-stat-box">
+            <div class="profile-stat-box-label">Net</div>
+            <div class="profile-stat-box-value" style="color:${net>=0?'var(--income)':'var(--expense)'}">${net>=0?'+':''}${fmt(net)}</div>
+          </div>
+        </div>
+        ${savingsGoal ? `
+        <div style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px">
+            <span>Savings goal progress</span><span>${savingsPct}%</span>
+          </div>
+          <div style="background:var(--surface2);border-radius:99px;height:8px;overflow:hidden">
+            <div style="width:${savingsPct}%;height:100%;background:var(--income);border-radius:99px;transition:width 0.4s"></div>
+          </div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <!-- Bank accounts -->
+    <div class="profile-section-card">
+      <div class="profile-section-title">
+        Bank Accounts & UPI
+        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onclick="openPayMethodModal('${pid}')">+ Add</button>
+      </div>
+      <div class="profile-section-body">
+        ${(profile.payMethods||[]).length === 0
+          ? `<p style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0">No payment methods added yet</p>`
+          : (profile.payMethods||[]).map(m => `
+            <div class="pay-method-row">
+              <div class="pay-method-icon">${m.type==='upi'?'📲':'🏦'}</div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">${m.nickname} ${m.isDefault?'<span class="pay-method-default">Default</span>':''}</div>
+                <div class="pay-method-sub">${m.value}</div>
+              </div>
+              ${!m.isDefault?`<button class="btn btn-ghost" style="font-size:11px;padding:3px 8px" onclick="setDefaultPayMethod('${pid}','${m.id}')">Set default</button>`:''}
+              <button class="tx-delete" style="opacity:1" onclick="deletePayMethod('${pid}','${m.id}')"><i class="ti ti-trash"></i></button>
+            </div>`).join('')}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
+          <div>
+            <div style="color:var(--text3);margin-bottom:2px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Salary Account</div>
+            <div style="font-weight:500">${salaryAc}</div>
+          </div>
+          <div>
+            <div style="color:var(--text3);margin-bottom:2px;font-size:11px;text-transform:uppercase;letter-spacing:0.8px">Savings Account</div>
+            <div style="font-weight:500">${savingsAc}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gmail Auto-import -->
+    <div class="gmail-connect-card">
+      <div class="gmail-connect-title">📧 Gmail Auto-import Setup</div>
+      <div class="gmail-connect-sub">Automatically pull bank transactions from your email alerts using Google Apps Script — free, no third-party apps needed.</div>
+      <div style="margin-bottom:16px">
+        <div class="gmail-step">
+          <div class="gmail-step-num">1</div>
+          <div class="gmail-step-text">Go to <strong>script.google.com</strong> and create a new project</div>
+        </div>
+        <div class="gmail-step">
+          <div class="gmail-step-num">2</div>
+          <div class="gmail-step-text">Paste the Apps Script code (tap the button below to copy it)</div>
+        </div>
+        <div class="gmail-step">
+          <div class="gmail-step-num">3</div>
+          <div class="gmail-step-text">Replace <strong>YOUR_PROFILE_ID</strong> with: <code style="background:rgba(255,255,255,0.2);padding:1px 5px;border-radius:4px;font-size:12px">${pid}</code></div>
+        </div>
+        <div class="gmail-step">
+          <div class="gmail-step-num">4</div>
+          <div class="gmail-step-text">Set a <strong>time-driven trigger</strong> to run every hour — Gmail → Paisa, automatically</div>
+        </div>
+      </div>
+      <button class="gmail-connect-btn" onclick="copyGmailScript('${pid}')">📋 Copy Apps Script Code</button>
+    </div>
+
+  </div>`;
+}
+
+// ─── Edit Profile Modal ───────────────────────────────────────────────────────
+window.openEditProfileModal = function(pid) {
+  const p = window.liveData.profiles.find(pr => pr.id === pid);
+  if (!p) return;
+  document.getElementById('epId').value            = pid;
+  document.getElementById('epName').value          = p.name || '';
+  document.getElementById('epOccupation').value    = p.occupation || '';
+  document.getElementById('epPhone').value         = p.phone || '';
+  document.getElementById('epEmail').value         = p.email || '';
+  document.getElementById('epApproxIncome').value  = p.approxIncome || '';
+  document.getElementById('epSalaryAccount').value = p.salaryAccount || '';
+  document.getElementById('epSavingsAccount').value= p.savingsAccount || '';
+  document.getElementById('epSavingsGoal').value   = p.savingsGoal || '';
+  document.getElementById('editProfileModal').classList.add('open');
+};
+
+window.saveEditProfile = async function() {
+  const pid  = document.getElementById('epId').value;
+  const data = {
+    name:           document.getElementById('epName').value.trim(),
+    occupation:     document.getElementById('epOccupation').value.trim(),
+    phone:          document.getElementById('epPhone').value.trim(),
+    email:          document.getElementById('epEmail').value.trim(),
+    approxIncome:   parseFloat(document.getElementById('epApproxIncome').value) || 0,
+    salaryAccount:  document.getElementById('epSalaryAccount').value.trim(),
+    savingsAccount: document.getElementById('epSavingsAccount').value.trim(),
+    savingsGoal:    parseFloat(document.getElementById('epSavingsGoal').value) || 0,
+  };
+  if (!data.name) { alert('Name is required.'); return; }
+  setSyncStatus('syncing', 'Saving…');
+  await setDoc(doc(db, 'profiles', pid), data, { merge: true });
+  closeModal('editProfileModal');
+  setSyncStatus('synced', 'Live sync on');
+};
+
+// ─── Photo upload (base64, stored in Firestore) ───────────────────────────────
+window.triggerPhotoUpload = function(pid) {
+  const inp = document.getElementById('photoUpload');
+  if (inp) inp.click();
+};
+window.handlePhotoUpload = function(pid, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 200000) { alert('Photo too large. Please use an image under 200KB.'); return; }
+  const reader = new FileReader();
+  reader.onload = async e => {
+    setSyncStatus('syncing', 'Uploading…');
+    await setDoc(doc(db, 'profiles', pid), { photoUrl: e.target.result }, { merge: true });
+    setSyncStatus('synced', 'Live sync on');
+  };
+  reader.readAsDataURL(file);
+};
+
+// ─── Gmail Apps Script generator ─────────────────────────────────────────────
+window.copyGmailScript = function(pid) {
+  const projectId = 'paisa-28800';
+  // Build script as array of lines to avoid template literal escaping issues
+  const lines = [
+    "// Paisa Gmail Auto-import Script",
+    "// ─────────────────────────────────────────────────",
+    "// HOW TO USE:",
+    "// 1. Go to script.google.com → New project",
+    "// 2. Paste this entire script",
+    "// 3. Click Save, then Run > importBankEmails (authorise when asked)",
+    "// 4. Set a trigger: Triggers > Add trigger > importBankEmails > Time-driven > Every hour",
+    "// ─────────────────────────────────────────────────",
+    "",
+    "var PROFILE_ID    = '" + pid + "';",
+    "var PROJECT_ID    = '" + projectId + "';",
+    "var FIRESTORE_URL = 'https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/transactions';",
+    "var API_KEY = 'AIzaSyBQ6RQOtwZ642_qMp6xL93195S41zRyiMo'; // Your Firebase API key",
+    "",
+    "// How far back to look. 86400000 = 24hrs. Increase to backfill e.g. 2592000000 = 30 days",
+    "var LOOKBACK_MS = 86400000;",
+    "",
+    "function importBankEmails() {",
+    "  var since = Math.floor((Date.now() - LOOKBACK_MS) / 1000);",
+    "  // Search subject + body — catches all Indian bank/UPI alert emails",
+    "  var query = '(UPI OR txn OR debited OR credited OR \"bank alert\" OR \"transaction alert\" OR \"UPI txn\" OR \"amount\" OR \"Rs.\" OR \"INR\") after:' + since;",
+    "  var threads = GmailApp.search(query, 0, 100);",
+    "  Logger.log('Threads found: ' + threads.length);",
+    "",
+    "  threads.forEach(function(thread) {",
+    "    thread.getMessages().forEach(function(msg) {",
+    "      if (msg.isStarred()) return;",
+    "",
+    "      var subject = msg.getSubject() || '';",
+    "      var body    = msg.getPlainBody() || '';",
+    "      var text    = subject + ' ' + body;",
+    "      var lower   = text.toLowerCase();",
+    "      var date    = Utilities.formatDate(msg.getDate(), 'Asia/Kolkata', 'yyyy-MM-dd');",
+    "      Logger.log('Checking: ' + subject);",
+    "",
+    "      // Amount: matches Rs.500, Rs 1,500.00, INR 500, ₹500",
+    "      var amountRegex = /(?:Rs\\.?|INR|\\u20b9)\\s*([\\d,]+(?:\\.\\d{1,2})?)/i;",
+    "      var amountMatch = text.match(amountRegex);",
+    "      if (!amountMatch) { Logger.log('No amount, skip'); return; }",
+    "      var amount = parseFloat(amountMatch[1].replace(/,/g, ''));",
+    "      if (!amount || amount <= 0) return;",
+    "",
+    "      // Type",
+    "      var debitWords  = ['debited','debit','sent','paid','transfer out','withdrawn','you have done a upi','upi txn','spent'];",
+    "      var creditWords = ['credited','credit','received','transfer in','deposited','refund'];",
+    "      var isDebit  = debitWords.some(function(w)  { return lower.indexOf(w) !== -1; });",
+    "      var isCredit = creditWords.some(function(w) { return lower.indexOf(w) !== -1; });",
+    "      var type = (isCredit && !isDebit) ? 'income' : 'expense';",
+    "",
+    "      // Description",
+    "      var payee = '';",
+    "      var vpaMatch  = text.match(/(?:VPA|UPI ID)[:\\s]+([A-Za-z0-9@._-]+)/i);",
+    "      var toMatch   = text.match(/(?:\\bto\\b|towards)\\s+([A-Za-z0-9@._-]{2,40})/i);",
+    "      var fromMatch = text.match(/(?:\\bfrom\\b|by)\\s+([A-Za-z0-9 ]{3,30})/i);",
+    "      if (vpaMatch)                         payee = vpaMatch[1].trim();",
+    "      else if (toMatch)                     payee = toMatch[1].trim();",
+    "      else if (fromMatch && type==='income') payee = fromMatch[1].trim();",
+    "      payee = payee.replace(/\\s+/g, ' ').trim();",
+    "      var desc = type === 'income' ? 'Auto imported credit' : 'Auto imported payment';",
+    "",
+    "      Logger.log('Importing: ' + type + ' ₹' + amount + ' — ' + desc);",
+    "      pushToFirestore({ amount:amount, type:type, date:date, desc:desc, payee:payee, profileId:PROFILE_ID });",
+    "      msg.star();",
+    "    });",
+    "  });",
+    "}",
+    "",
+    "function pushToFirestore(tx) {",
+    "  // Using API key auth — works without OAuth scope issues",
+    "  var url = FIRESTORE_URL + '?key=' + API_KEY;",
+    "  var payload = {",
+    "    fields: {",
+    "      profileId:    { stringValue:  tx.profileId },",
+    "      type:         { stringValue:  tx.type },",
+    "      amount:       { doubleValue:  tx.amount },",
+    "      desc:         { stringValue:  tx.desc },",
+    "      payee:        { stringValue:  tx.payee || '' },",
+    "      date:         { stringValue:  tx.date },",
+    "      category:     { stringValue:  'auto-import' },",
+    "      payMethod:    { stringValue:  '' },",
+    "      amendments:   { arrayValue:   { values: [] } },",
+    "      isAutoImport: { booleanValue: true },",
+    "      createdAt:    { timestampValue: new Date().toISOString() }",
+    "    }",
+    "  };",
+    "  var options = {",
+    "    method: 'POST',",
+    "    contentType: 'application/json',",
+    "    payload: JSON.stringify(payload),",
+    "    muteHttpExceptions: true",
+    "  };",
+    "  var res = UrlFetchApp.fetch(url, options);",
+    "  Logger.log('Response: ' + res.getResponseCode() + ' for ' + tx.desc);",
+    "  if (res.getResponseCode() !== 200) {",
+    "    Logger.log('Error body: ' + res.getContentText());",
+    "  }",
+    "}",
+  ];
+  const script = lines.join('\n');
+
+  navigator.clipboard.writeText(script).then(() => {
+    alert('✅ Script copied!\n\nGo to script.google.com, create a new project, paste the script, and follow the 4 steps shown above.');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = script;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('✅ Script copied! Go to script.google.com to set it up.');
+  });
+};
+
+window.render = function() {
+  renderSidebar();
+  const v = window.uiState.currentView;
+  if (window.uiState.isFamilyView) { renderFamilyView(); return; }
+  if      (v==='dashboard')    renderDashboard();
+  else if (v==='transactions') renderTransactions();
+  else if (v==='categories')   renderCategoriesPage();
+  else if (v==='profile')      renderProfilePage();
+};
+
+// ─── Mobile helpers ──────────────────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+window.toggleMobileSidebar = function() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  const menuBtn = document.getElementById('mob-menu');
+  const isOpen = sb.classList.toggle('mobile-open');
+  ov.classList.toggle('visible', isOpen);
+  if (menuBtn) menuBtn.classList.toggle('active', isOpen);
+};
+
+window.closeMobileSidebar = function() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebarOverlay').classList.remove('visible');
+  const menuBtn = document.getElementById('mob-menu');
+  if (menuBtn) menuBtn.classList.remove('active');
+};
+
+window.mobNav = function(view, btn) {
+  // close sidebar if open
+  closeMobileSidebar();
+  if (window.uiState.isFamilyView) {
+    if (view === 'transactions' && window.uiState.familySubView !== 'transactions') resetTransactionFilters();
+    window.uiState.familySubView = view;
+  } else {
+    if (view === 'transactions' && window.uiState.currentView !== 'transactions') resetTransactionFilters();
+    window.uiState.currentView = view;
+  }
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // sync desktop nav too
+  const viewMap = {dashboard:0, transactions:1, categories:2, profile:3};
+  const desktopBtns = document.querySelectorAll('.nav-btn');
+  desktopBtns.forEach(b => b.classList.remove('active'));
+  if (desktopBtns[viewMap[view]]) desktopBtns[viewMap[view]].classList.add('active');
+  render();
+};
+
+// close mobile sidebar when a profile is switched
+const _origSwitchProfile = window.switchProfile;
+window.switchProfile = function(id) {
+  if (isMobile()) closeMobileSidebar();
+  _origSwitchProfile(id);
+};
+const _origSwitchToFamily = window.switchToFamily;
+window.switchToFamily = function() {
+  if (isMobile()) { closeMobileSidebar(); }
+  _origSwitchToFamily();
+  // update mobile nav
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  const dashBtn = document.getElementById('mob-dashboard');
+  if (dashBtn) dashBtn.classList.add('active');
+};
+
+// ── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  // Don't fire if user is typing in an input
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if (e.key === 'n' || e.key === 'N') openTxModal();
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+});
+
+// close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
+});
+document.getElementById('renameProfileInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') renameProfile();
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await seedIfEmpty();
+  startListeners();
+})();
+</script>
+</body>
+</html>
